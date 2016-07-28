@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+export PYBUILD_NAME=python-thumbor-wikimedia
+
+%:
+	dh $@ --with python2 --buildsystem=pybuild
+
+override_dh_clean:
+	rm -rf wikimedia_thumbor.egg-info
+	dh_clean

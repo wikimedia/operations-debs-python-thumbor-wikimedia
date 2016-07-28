@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+
+from setuptools import setup, find_packages
+
+
+setup(
+    name='wikimedia_thumbor',
+    version='0.1.5',
+    url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
+    license='MIT',
+    author='Gilles Dubuc, Wikimedia Foundation',
+    description='Wikimedia Thumbor plugins',
+    packages=find_packages(),
+    include_package_data=True,
+    zip_safe=False,
+    platforms='any',
+    install_requires=[
+        'bs4',
+        'cairosvg',
+        'gi',
+        'libthumbor>=1.3.2',
+        'lxml',
+        'python-djvulibre',
+        'python-swiftclient',
+        'thumbor>=6.0.1',
+        'wand'
+    ],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Software Development :: Libraries :: Python Modules'
+    ]
+)

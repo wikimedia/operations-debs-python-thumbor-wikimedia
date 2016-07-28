@@ -1,0 +1,150 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# thumbor imaging service
+# https://github.com/thumbor/thumbor/wiki
+
+# Licensed under the MIT license:
+# http://www.opensource.org/licenses/mit-license
+# Copyright (c) 2011 globo.com timehome@corp.globo.com
+# Copyright (c) 2016 Wikimedia Foundation
+
+# Video loader, only loads the frame needed from a remote video
+# Do not use it as-is with persistent storage of originals,
+# otherwise the first frame requested will be stored as the
+# original for subsequent requests
+
+from urllib import unquote
+from functools import partial
+
+from thumbor.loaders import LoaderResult
+from tornado.process import Subprocess
+from thumbor.utils import logger
+
+from wikimedia_thumbor.shell_runner import ShellRunner
+
+
+def should_run(url):
+    unquoted_url = unquote(url)
+
+    if (unquoted_url.endswith('.ogv') or
+            unquoted_url.endswith('ogg') or
+            unquoted_url.endswith('webm')):
+        return True
+
+    return False
+
+
+def load_sync(context, url, callback):
+    # Disable storage of original. These lines are useful if
+    # you want your Thumbor instance to store all originals persistently
+    # except video frames.
+    #
+    # from thumbor.storages.no_storage import Storage as NoStorage
+    # context.modules.storage = NoStorage(context)
+
+    unquoted_url = unquote(url)
+
+    command = ShellRunner.wrap_command([
+        context.config.FFPROBE_PATH,
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        '%s' % unquoted_url
+    ], context)
+
+    logger.debug('[Video] load_sync: %r' % command)
+
+    process = Subprocess(command, stdout=Subprocess.STREAM)
+    process.set_exit_callback(
+        partial(
+            _parse_time_status,
+            context,
+            unquoted_url,
+            callback,
+            process
+        )
+    )
+
+
+def _parse_time_status(context, url, callback, process, status):
+    if status != 0:
+        result = LoaderResult()
+        result.successful = False
+        callback(result)
+    else:
+        process.stdout.read_until_close(
+            partial(
+                _parse_time,
+                context,
+                url,
+                callback
+            )
+        )
+
+
+def _parse_time(context, url, callback, output):
+    duration = float(output)
+    unquoted_url = unquote(url)
+
+    try:
+        seek = int(context.request.page)
+    except AttributeError:
+        seek = duration / 2
+
+    command = ShellRunner.wrap_command([
+        context.config.FFMPEG_PATH,
+        # Order is important, for fast seeking -ss has to come before -i
+        # As explained on https://trac.ffmpeg.org/wiki/Seeking
+        '-ss',
+        '%d' % seek,
+        '-i',
+        '%s' % unquoted_url,
+        '-y',
+        '-vframes',
+        '1',
+        '-an',
+        '-f',
+        'image2',
+        '-nostats',
+        '-loglevel',
+        'error',
+        '-'
+    ], context)
+
+    logger.debug('[Video] _parse_time: %r' % command)
+
+    process = Subprocess(command, stdout=Subprocess.STREAM)
+    process.set_exit_callback(
+        partial(
+            _process_done,
+            callback,
+            process
+        )
+    )
+
+
+def _process_done(callback, process, status):
+    result = LoaderResult()
+
+    if status != 0:
+        result.successful = False
+        callback(result)
+    else:
+
+        process.stdout.read_until_close(
+            partial(
+                _process_stdout,
+                callback
+            )
+        )
+
+
+def _process_stdout(callback, stdout):
+    result = LoaderResult()
+    result.successful = True
+    result.buffer = stdout
+    callback(result)
