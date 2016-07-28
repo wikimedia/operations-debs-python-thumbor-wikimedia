@@ -21,6 +21,10 @@ from wikimedia_thumbor.shell_runner import ShellRunner
 from wikimedia_thumbor.engine.imagemagick import Engine as IMEngine
 
 
+class CommandError(Exception):
+    pass
+
+
 class BaseWikimediaEngine(IMEngine):
     # Put temp files and fifos into their own temp folder to avoid
     # exploits where converters might access other files in the same folder
@@ -80,3 +84,23 @@ class BaseWikimediaEngine(IMEngine):
 
     def cleanup(self):
         shutil.rmtree(self.temp_dir, True)
+
+    def command(self, command, env=None):
+        returncode, stderr, stdout = ShellRunner.command(
+            command,
+            self.context,
+            env=env
+        )
+
+        if returncode != 0:
+            self.cleanup_source()
+            raise CommandError(
+                command,
+                stdout,
+                stderr,
+                returncode
+            )
+
+        self.cleanup_source()
+
+        return stdout

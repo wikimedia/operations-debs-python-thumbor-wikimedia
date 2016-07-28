@@ -12,7 +12,6 @@
 # Ghostscript engine
 
 from wikimedia_thumbor.engine import BaseWikimediaEngine
-from wikimedia_thumbor.shell_runner import ShellRunner
 
 
 BaseWikimediaEngine.add_format(
@@ -54,24 +53,3 @@ class Engine(BaseWikimediaEngine):
         png = self.command(command)
 
         return super(Engine, self).create_image(png)
-
-    def command(self, command, env=None):
-        returncode, stderr, stdout = ShellRunner.command(
-            command,
-            self.context,
-            env=env
-        )
-
-        if returncode != 0:
-            self.cleanup_source()
-            raise Exception(
-                'CommandError',
-                command,
-                stdout,
-                stderr,
-                returncode
-            )
-
-        self.cleanup_source()
-
-        return stdout
