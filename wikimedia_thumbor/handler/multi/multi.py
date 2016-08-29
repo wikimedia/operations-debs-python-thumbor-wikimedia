@@ -63,13 +63,13 @@ class MultiHandler(ImagingHandler):
         super(MultiHandler, self).finish()
 
     # We don't want /multi to serve any of the requested content
-    def write(self, chunk):
+    def write(self, chunk):  # pragma: no cover
         pass
 
     def finish(self, chunk=None):
         pass
 
-    def add_header(self, name, value):
+    def add_header(self, name, value):  # pragma: no cover
         pass
 
     def set_header(self, name, value):

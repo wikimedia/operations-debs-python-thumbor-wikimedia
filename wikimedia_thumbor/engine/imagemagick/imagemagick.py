@@ -68,14 +68,14 @@ def read_blob(self, blob, format, width, height):
         blob
     )
 
-    if not r:
+    if not r:  # pragma: no cover
         self.raise_exception()
 
 
 def set_interlace_scheme(self, scheme):
     try:
         s = INTERLACE_SCHEMES.index(scheme)
-    except IndexError:
+    except IndexError:  # pragma: no cover
         raise IndexError(
             repr(scheme) + ' is an invalid interlace scheme')
 
@@ -84,7 +84,7 @@ def set_interlace_scheme(self, scheme):
         s
     )
 
-    if not r:
+    if not r:  # pragma: no cover
         self.raise_exception()
 
 image.Image.read_blob = read_blob
@@ -109,8 +109,6 @@ class Engine(BaseEngine):
             if 'ImageSize' in self.exif:
                 im.options['jpeg:size'] = self.exif['ImageSize']
                 logger.debug('[IM] Set jpeg:size hint')
-            else:
-                logger.debug('[IM] Failed to read EXIF ImageSize')
 
         im.read(blob=buffer)
 
@@ -127,7 +125,6 @@ class Engine(BaseEngine):
         command = [
             '-s',
             '-s',
-            '-s',
         ]
 
         command += ['-{0}'.format(i) for i in fields]
@@ -138,12 +135,9 @@ class Engine(BaseEngine):
             buffer=buffer
         )
 
-        i = 0
-
         for s in stdout.splitlines():
-            field = fields[i]
-            self.exif[field] = s
-            i += 1
+            values = s.split(': ', 1)
+            self.exif[values[0]] = values[1]
 
         logger.debug('[IM] EXIF: %r' % self.exif)
 
@@ -270,11 +264,10 @@ class Engine(BaseEngine):
         self.image.rotate(degree=degrees)
 
     def reorientate(self):
-        # We can't reorientate right now because we have no image
-        if hasattr(self, 'buffer'):
-            return
-
-        self.image.auto_orient()
+        # Wand has an auto_orient() function in 4.1+
+        result = library.MagickAutoOrientImage(self.image.wand)
+        if not result:  # pragma: no cover
+            self.image.raise_exception()
 
     def image_data_as_rgb(self, update_image=True):
         converted = self.image.convert(self.mode)
@@ -308,5 +301,5 @@ class Engine(BaseEngine):
     def size(self):
         return self.image.size
 
-    def cleanup(self):
+    def cleanup(self):  # pragma: no cover
         Engine.exiftool.cleanup()

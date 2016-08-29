@@ -67,7 +67,7 @@ class Engine(BaseWikimediaEngine):
 
         ShellRunner.rm_f(fifo)
 
-        if proc.returncode != 0:
+        if proc.returncode != 0:  # pragma: no cover
             raise Exception(
                 'CommandError',
                 command,
@@ -100,7 +100,7 @@ class Engine(BaseWikimediaEngine):
                 if err.errno == errno.ENXIO:
                     time.sleep(.1)
                     continue
-                else:
+                else:  # pragma: no cover
                     raise
 
         # The consumer is reading, start writing the buffer contents to the
@@ -119,7 +119,7 @@ class Engine(BaseWikimediaEngine):
                     if err.errno == errno.EAGAIN:
                         time.sleep(.1)
                         continue
-                    else:
+                    else:  # pragma: no cover
                         os.close(os_fifo)
                         raise
 

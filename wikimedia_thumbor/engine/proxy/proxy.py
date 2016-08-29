@@ -22,8 +22,8 @@ from thumbor.engines import BaseEngine
 
 
 def utime():
-    return resource.getrusage(resource.RUSAGE_SELF).ru_utime
-    + resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime
+    return resource.getrusage(resource.RUSAGE_SELF).ru_utime \
+        + resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime
 
 
 class Engine(BaseEngine):
@@ -69,7 +69,7 @@ class Engine(BaseEngine):
 
         raise Exception(
             'Unable to find a suitable engine, tried %r' % self.lcl['engines']
-        )
+        )  # pragma: no cover
 
     def record_timing(self, timing, header, end):
         duration = end - self.lcl[timing]
@@ -113,7 +113,7 @@ class Engine(BaseEngine):
     def __getattr__(self, name):
         return getattr(self.lcl[self.select_engine()], name)
 
-    def __delattr__(self, name):
+    def __delattr__(self, name):  # pragma: no cover
         return delattr(self.lcl[self.select_engine()], name)
 
     def __setattr__(self, name, value):
@@ -146,7 +146,7 @@ class Engine(BaseEngine):
     # don't have the right amount of parameters
     # They call __getattr__ because the calls still need to be proxied
     # (otherwise they would just loop back to their own definition right here)
-    def create_image(self, buffer):
+    def create_image(self, buffer):  # pragma: no cover
         return self.__getattr__('create_image')(buffer)
 
     def crop(self, left, top, right, bottom):
@@ -164,7 +164,7 @@ class Engine(BaseEngine):
     def resize(self, width, height):
         return self.__getattr__('resize')(width, height)
 
-    def rotate(self, degrees):
+    def rotate(self, degrees):  # pragma: no cover
         return self.__getattr__('rotate')(degrees)
 
     def reorientate(self):
@@ -177,7 +177,7 @@ class Engine(BaseEngine):
     def size(self):
         return self.__getattr__('size')
 
-    def cleanup(self):
+    def cleanup(self):  # pragma: no cover
         # Call cleanup on all the engines
         for enginename, extensions in self.lcl['engines'].iteritems():
             engine = self.lcl[enginename]

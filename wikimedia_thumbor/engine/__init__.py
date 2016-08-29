@@ -82,7 +82,7 @@ class BaseWikimediaEngine(IMEngine):
         if hasattr(self, 'source'):
             ShellRunner.rm_f(self.source)
 
-    def cleanup(self):
+    def cleanup(self):  # pragma: no cover
         shutil.rmtree(self.temp_dir, True)
 
     def command(self, command, env=None):

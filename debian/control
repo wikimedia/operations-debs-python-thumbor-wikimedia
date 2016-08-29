@@ -19,6 +19,8 @@ Build-Depends: cgroup-tools,
                python-gi,
                python-libthumbor (>= 1.3.2),
                python-lxml,
+               python-nose,
+               python-pyssim,
                python-setuptools,
                python-swiftclient,
                python-thumbor-community-core,
@@ -30,7 +32,7 @@ Homepage: https://phabricator.wikimedia.org/diffusion/THMBREXT/
 
 Package: python-thumbor-wikimedia
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, cgroup-tools, djvulibre-bin, ffmpeg, ghostscript, gifsicle, libimage-exiftool-perl, libvips-tools, python-bs4, python-cairosvg, python-djvu, python-gi, python-libthumbor (>= 1.3.2), python-lxml, python-swiftclient, python-thumbor-community-core, python-wand, thumbor (>= 6.0.1), xcftools
+Depends: ${misc:Depends}, ${python:Depends}, cgroup-tools, djvulibre-bin, ffmpeg, ghostscript, gifsicle, libimage-exiftool-perl, librsvg2-bin, libvips-tools, python-bs4, python-cairosvg, python-djvu, python-gi, python-libthumbor (>= 1.3.2), python-lxml, python-swiftclient, python-thumbor-community-core, python-wand, thumbor (>= 6.0.1), xcftools
 Provides: ${python:Provides}
 Description: Thumbor wikimedia extensions
  This provides all the custom Thumbor extensions needed at Wikimedia

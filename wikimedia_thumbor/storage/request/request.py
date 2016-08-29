@@ -27,15 +27,6 @@ class Storage(BaseStorage):
         return path
 
     def put_crypto(self, path):
-        if not self.context.config.STORES_CRYPTO_KEY_FOR_EACH_IMAGE:
-            return
-
-        if not self.context.server.security_key:
-            raise RuntimeError(
-                "STORES_CRYPTO_KEY_FOR_EACH_IMAGE can't be True"
-                + " if no SECURITY_KEY specified"
-            )
-
         return path
 
     @return_future

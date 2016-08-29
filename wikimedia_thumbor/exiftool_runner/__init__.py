@@ -112,7 +112,7 @@ class ExiftoolRunner:
 
         try:
             os.remove(input_fifo_name)
-        except OSError as e:
+        except OSError as e:  # pragma: no cover
             if e.errno != errno.ENOENT:
                 raise
 
@@ -161,13 +161,13 @@ class ExiftoolRunner:
         try:
             if context.config.EXIFTOOL_STAY_OPEN:
                 return cls.stay_open_command(pre, post, context, buffer)
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             pass
 
         return cls.classic_command(pre, post, context, buffer)
 
     @classmethod
-    def cleanup(cls):
+    def cleanup(cls):  # pragma: no cover
         if cls.process:
             logger.debug('[ExiftoolRunner] killing process')
             cls.process.kill()

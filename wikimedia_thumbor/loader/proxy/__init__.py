@@ -34,11 +34,11 @@ def validate(context, url):
     )
 
 
-def return_contents(response, url, callback, context):
+def return_contents(response, url, callback, context):  # pragma: no cover
     return http_loader.return_contents(response, url, callback, context)
 
 
-def encode(string):
+def encode(string):  # pragma: no cover
     return http_loader.encode(string)
 
 

@@ -24,12 +24,24 @@ BaseWikimediaEngine.add_format(
 class Engine(BaseWikimediaEngine):
     def create_image(self, buffer):
         self.original_buffer = buffer
-        self.prepare_source(buffer)
 
         try:
             page = self.context.request.page
         except AttributeError:
             page = 1
+
+        png = self.get_png_for_page(buffer, page)
+
+        # GS is being unhelpful and outputting that error to stdout
+        # with a 0 exit status
+        error = 'No pages will be processed (FirstPage > LastPage)'
+        if len(png) < 200 and png.find(error) != -1:
+            png = self.get_png_for_page(buffer, 1)
+
+        return super(Engine, self).create_image(png)
+
+    def get_png_for_page(self, buffer, page):
+        self.prepare_source(buffer)
 
         # We use the command and not the python bindings because those can't
         # use the %stdout option properly. The bindings version writes to
@@ -46,10 +58,9 @@ class Engine(BaseWikimediaEngine):
             "-r150",
             "-dBATCH",
             "-dNOPAUSE",
+            "-dSAFER",
             "-q",
             "-f%s" % self.source
         ]
 
-        png = self.command(command)
-
-        return super(Engine, self).create_image(png)
+        return self.command(command)

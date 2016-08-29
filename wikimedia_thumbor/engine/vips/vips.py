@@ -24,7 +24,7 @@ from wikimedia_thumbor.shell_runner import ShellRunner  # noqa
 
 use_command_line = True
 
-try:
+try:  # pragma: no cover
     import gi
     if hasattr(gi, 'require_version'):
         logger.debug('[VIPS] gi found')
@@ -41,12 +41,12 @@ try:
             logger.debug('[VIPS] VIPS 8.0+ not found in gi repository')
     else:
         logger.debug('[VIPS] Wrong gi found (not PyGObject)')
-except ImportError:
+except ImportError:  # pragma: no cover
     logger.debug('[VIPS] gi not found')
 
 if use_command_line:
     logger.debug('[VIPS] Will use command line')
-else:
+else:  # pragma: no cover
     logger.debug('[VIPS] Will use bindings')
 
 BaseWikimediaEngine.add_format(
@@ -83,7 +83,7 @@ class Engine(BaseWikimediaEngine):
         pixels = self.context.vips['width'] * self.context.vips['height']
 
         if self.context.config.VIPS_ENGINE_MIN_PIXELS is None:
-            return True
+            return True  # pragma: no cover
         else:
             if pixels > self.context.config.VIPS_ENGINE_MIN_PIXELS:
                 return True
@@ -93,7 +93,7 @@ class Engine(BaseWikimediaEngine):
     def create_image(self, buffer):
         try:
             original_ext = self.context.request.extension
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             # If there is no extension in the request, it means that we
             # are serving a cached result. In which case no VIPS processing
             # is required.
@@ -109,14 +109,14 @@ class Engine(BaseWikimediaEngine):
 
         if use_command_line:
             result = self.shrink_with_command(buffer, shrink_factor)
-        else:
+        else:  # pragma: no cover
             result = self.shrink_with_bindings(buffer, shrink_factor)
 
         self.extension = original_ext
 
         return super(Engine, self).create_image(result)
 
-    def shrink_with_bindings(self, buffer, shrink_factor):
+    def shrink_with_bindings(self, buffer, shrink_factor):  # pragma: no cover
         logger.debug('[VIPS] Shrinking with bindings')
         logging.disable(logging.DEBUG)
 
@@ -149,6 +149,17 @@ class Engine(BaseWikimediaEngine):
         except AttributeError:
             source = self.source
 
+        try:
+            return self.shrink_with_command_for_page(source, shrink_factor)
+        except CommandError:
+            # The page is probably out of bounds, try again without
+            # specifying a page
+            self.prepare_source(buffer)
+            source = self.source
+
+        return self.shrink_with_command_for_page(source, shrink_factor)
+
+    def shrink_with_command_for_page(self, source, shrink_factor):
         destination = os.path.join(self.temp_dir, 'vips_result.png')
 
         command = [
@@ -162,7 +173,7 @@ class Engine(BaseWikimediaEngine):
 
         try:
             self.command(command)
-        except CommandError as e:
+        except CommandError as e:  # pragma: no cover
             ShellRunner.rm_f(destination)
             raise e
 

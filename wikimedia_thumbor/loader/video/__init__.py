@@ -18,13 +18,16 @@ from urllib import unquote
 from functools import partial
 
 from thumbor.loaders import LoaderResult
-from tornado.process import Subprocess
 from thumbor.utils import logger
+
+from tornado.concurrent import return_future
+from tornado.process import Subprocess
+
 
 from wikimedia_thumbor.shell_runner import ShellRunner
 
 
-def should_run(url):
+def should_run(url):  # pragma: no cover
     unquoted_url = unquote(url)
 
     if (unquoted_url.endswith('.ogv') or
@@ -33,6 +36,11 @@ def should_run(url):
         return True
 
     return False
+
+
+@return_future
+def load(context, url, callback):
+    return load_sync(context, url, callback)
 
 
 def load_sync(context, url, callback):
@@ -71,7 +79,7 @@ def load_sync(context, url, callback):
 
 
 def _parse_time_status(context, url, callback, process, status):
-    if status != 0:
+    if status != 0:  # pragma: no cover
         result = LoaderResult()
         result.successful = False
         callback(result)
@@ -130,11 +138,10 @@ def _parse_time(context, url, callback, output):
 def _process_done(callback, process, status):
     result = LoaderResult()
 
-    if status != 0:
+    if status != 0:  # pragma: no cover
         result.successful = False
         callback(result)
     else:
-
         process.stdout.read_until_close(
             partial(
                 _process_stdout,

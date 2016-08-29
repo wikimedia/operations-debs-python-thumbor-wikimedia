@@ -3,9 +3,15 @@
 from setuptools import setup, find_packages
 
 
+tests_require = [
+    'nose',
+    'pyssim'
+]
+
+
 setup(
     name='wikimedia_thumbor',
-    version='0.1.7',
+    version='0.1.12',
     url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
     license='MIT',
     author='Gilles Dubuc, Wikimedia Foundation',
@@ -25,6 +31,9 @@ setup(
         'thumbor>=6.0.1',
         'wand'
     ],
+    extras_require={
+        'tests': tests_require,
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
