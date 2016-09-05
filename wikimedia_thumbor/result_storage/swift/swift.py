@@ -27,7 +27,8 @@ class Storage(BaseStorage):
         self.swift = client.Connection(
             user=self.context.config.SWIFT_USER,
             key=self.context.config.SWIFT_KEY,
-            authurl=authurl
+            authurl=authurl,
+            timeout=self.context.config.SWIFT_CONNECTION_TIMEOUT
         )
 
     def uri(self):  # pragma: no cover

@@ -264,8 +264,16 @@ class Engine(BaseEngine):
         self.image.rotate(degree=degrees)
 
     def reorientate(self):
-        # Wand has an auto_orient() function in 4.1+
-        result = library.MagickAutoOrientImage(self.image.wand)
+        # Wand has auto_orient() function only in 4.1+
+        if hasattr(self.image, 'auto_orient'):
+            self.image.auto_orient()
+            return
+
+        # Attempt fallback to ImageMagick library's native function
+        # If old Wand and recent IM
+        if hasattr(library, 'MagickAutoOrientImage'):
+            result = library.MagickAutoOrientImage(self.image.wand)
+
         if not result:  # pragma: no cover
             self.image.raise_exception()
 

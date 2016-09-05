@@ -23,6 +23,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             'wikipedia-en-local-thumb'
         ]
         cfg.SWIFT_PATH_PREFIX = 'thumbor/'
+        cfg.SWIFT_CONNECTION_TIMEOUT = 5
 
         cfg.QUALITY_LOW = 10
         cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.6,0.01,false,0.85)'

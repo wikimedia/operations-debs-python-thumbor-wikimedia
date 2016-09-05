@@ -1,3 +1,11 @@
+python-thumbor-wikimedia (0.1.13-1) unstable; urgency=low
+
+  * New upstream release
+  * debian/control
+    - add python-swiftclient minimum version for timeout feature
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 05 Sep 2016 09:05:15 +0000
+
 python-thumbor-wikimedia (0.1.12-1) unstable; urgency=low
 
   * New upstream release

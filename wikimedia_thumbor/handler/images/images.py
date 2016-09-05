@@ -7,9 +7,12 @@
 # This handler translates mediawiki thumbnail urls into thumbor urls
 # And sets the xkey for Varnish purging purposes
 
+from urllib import quote
 import json
+import tornado.gen as gen
 import tornado.web
 
+from thumbor.context import RequestParameters
 from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
 
@@ -90,8 +93,7 @@ class ImagesHandler(ImagingHandler):
             )
         )
 
-        translated = {'unsafe': 'unsafe'}
-        translated['width'] = kw['width']
+        translated = {'width': kw['width']}
 
         sharded_containers = []
 
@@ -100,6 +102,14 @@ class ImagesHandler(ImagingHandler):
 
         project = kw['project']
         language = kw['language']
+
+        # Handle sharding check before legacy projlang override
+        projlang = '-'.join((project, language))
+        original_container = projlang + '-local-public'
+        thumbnail_container = projlang + '-local-thumb'
+
+        original_sharded = original_container in sharded_containers
+        thumbnail_sharded = thumbnail_container in sharded_containers
 
         # Legacy special cases taken from rewrite.py
         if project == 'wikipedia':
@@ -115,10 +125,10 @@ class ImagesHandler(ImagingHandler):
 
         shard = '.' + kw['shard2']
 
-        if original_container in sharded_containers:
+        if original_sharded:
             original_container += shard
 
-        if thumbnail_container in sharded_containers:
+        if thumbnail_sharded:
             thumbnail_container += shard
 
         swift_uri = (
@@ -204,3 +214,26 @@ class ImagesHandler(ImagingHandler):
         )
 
         return translated
+
+    @gen.coroutine  # NOQA
+    def check_image(self, kw):
+        if self.context.config.MAX_ID_LENGTH > 0:
+            # Check if an image with an uuid exists in storage
+            truncated_image = kw['image'][:self.context.config.MAX_ID_LENGTH]
+            maybe_future = self.context.modules.storage.exists(truncated_image)
+            exists = yield gen.maybe_future(maybe_future)
+            if exists:  # pragma: no cover
+                kw['image'] = kw['image'][:self.context.config.MAX_ID_LENGTH]
+
+        kw['image'] = quote(kw['image'].encode('utf-8'))
+        if not self.validate(kw['image']):  # pragma: no cover
+            self._error(
+                400,
+                'No original image was specified in the given URL'
+            )
+            return
+
+        kw['request'] = self.request
+        self.context.request = RequestParameters(**kw)
+
+        self.execute_image_operations()
