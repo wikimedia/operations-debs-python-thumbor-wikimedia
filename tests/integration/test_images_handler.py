@@ -154,10 +154,10 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         self.run_and_check_headers(
             '/wikipedia/meta/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
             'File:1Mcolors.png',
-            'wikimedia-meta-local-thumb',
+            'wikipedia-meta-local-thumb',
             'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png',
             '400',
-            'http://swifthost/swift/v1/api/path/wikimedia-meta-local-public/'
+            'http://swifthost/swift/v1/api/path/wikipedia-meta-local-public/'
             + 'd/d3/1Mcolors.png',
             'format(png)'
         )
@@ -166,10 +166,10 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         self.run_and_check_headers(
             '/wikipedia/mediawiki/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
             'File:1Mcolors.png',
-            'mediawiki-www-local-thumb',
+            'wikipedia-mediawiki-local-thumb',
             'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png',
             '400',
-            'http://swifthost/swift/v1/api/path/mediawiki-www-local-public/'
+            'http://swifthost/swift/v1/api/path/wikipedia-mediawiki-local-public/'
             + 'd/d3/1Mcolors.png',
             'format(png)'
         )
