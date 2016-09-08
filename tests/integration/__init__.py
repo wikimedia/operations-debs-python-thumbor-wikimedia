@@ -50,6 +50,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         )
         cfg.SUBPROCESS_TIMEOUT_PATH = timeout
 
+        cfg.SUBPROCESS_USE_TIMEOUT = True
         cfg.SUBPROCESS_TIMEOUT = 60
 
         cfg.CHROMA_SUBSAMPLING = '4:2:0'

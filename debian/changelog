@@ -1,3 +1,14 @@
+python-thumbor-wikimedia (0.1.15-1) unstable; urgency=low
+
+  * New upstream release
+  * debian/control
+    - remove dependency on cgroup-tools
+  * 40-wikimedia.conf
+    - remove cgroup config, because package doesn't actually create the cgroups
+    - set new flag needed for timeout to be used
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Thu, 08 Sep 2016 12:46:10 +0000
+
 python-thumbor-wikimedia (0.1.14-1) unstable; urgency=low
 
   * New upstream release

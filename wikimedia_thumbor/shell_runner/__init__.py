@@ -24,7 +24,8 @@ class ShellRunner:
     def wrap_command(cls, command, context):
         wrapped_command = command
 
-        try:  # pragma: no cover
+        if (hasattr(context.config, 'SUBPROCESS_USE_CGEXEC')
+            and context.config.SUBPROCESS_USE_CGEXEC):  # pragma: no cover
             cgroup = context.config.SUBPROCESS_CGROUP
             cgexec_path = context.config.SUBPROCESS_CGEXEC_PATH
             wrapped_command = [
@@ -32,10 +33,9 @@ class ShellRunner:
                 '-g',
                 cgroup
             ] + wrapped_command
-        except AttributeError:
-            pass
 
-        try:
+        if (hasattr(context.config, 'SUBPROCESS_USE_TIMEOUT')
+            and context.config.SUBPROCESS_USE_TIMEOUT):
             timeout = context.config.SUBPROCESS_TIMEOUT
             timeout_path = context.config.SUBPROCESS_TIMEOUT_PATH
             wrapped_command = [
@@ -43,8 +43,6 @@ class ShellRunner:
                 '--foreground',
                 '%s' % timeout
             ] + wrapped_command
-        except AttributeError:  # pragma: no cover
-            pass
 
         return wrapped_command
 

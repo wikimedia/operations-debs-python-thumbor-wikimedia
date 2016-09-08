@@ -145,6 +145,9 @@ class ExiftoolRunner:
 
         cls.add_duration_header(context, duration)
 
+        if stderr:
+            logger.error('[ExiftoolRunner] error: %r' % stderr)
+
         return stdout
 
     @classmethod
