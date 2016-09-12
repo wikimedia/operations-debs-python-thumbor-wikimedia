@@ -1,3 +1,13 @@
+python-thumbor-wikimedia (0.1.18-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/control
+    - remove dependency on python-bs4
+  * debian/40-wikimedia.conf
+    - add SLOW_PROCESSING_LIMIT config value
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 12 Sep 2016 13:57:35 +0000
+
 python-thumbor-wikimedia (0.1.17-1) jessie-wikimedia; urgency=low
 
   * New upstream release
@@ -17,7 +27,7 @@ python-thumbor-wikimedia (0.1.15-1) unstable; urgency=low
   * New upstream release
   * debian/control
     - remove dependency on cgroup-tools
-  * 40-wikimedia.conf
+  * debian/40-wikimedia.conf
     - remove cgroup config, because package doesn't actually create the cgroups
     - set new flag needed for timeout to be used
 
