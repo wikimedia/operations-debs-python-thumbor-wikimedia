@@ -84,6 +84,10 @@ class Engine(BaseEngine):
             duration
         )
 
+        if (hasattr(self.lcl['context'].config, 'SLOW_PROCESSING_LIMIT')
+            and duration > self.lcl['context'].config.SLOW_PROCESSING_LIMIT):
+            logger.error('[Proxy] Request took a long time: %r' % duration)
+
         self.lcl['context'].request_handler.set_header(
             header,
             duration

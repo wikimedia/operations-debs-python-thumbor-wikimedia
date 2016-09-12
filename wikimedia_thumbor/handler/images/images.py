@@ -72,16 +72,6 @@ class ImagesHandler(ImagingHandler):
 
         return path
 
-    @tornado.web.asynchronous
-    def get(self, **kw):
-        translated_kw = self.translate(kw)
-        return super(ImagesHandler, self).get(**translated_kw)
-
-    @tornado.web.asynchronous
-    def head(self, **kw):  # pragma: no cover
-        translated_kw = self.translate(kw)
-        return super(ImagesHandler, self).head(**translated_kw)
-
     def translate(self, kw):
         logger.debug('[ImagesHandlers] translate: %r' % kw)
 
@@ -199,25 +189,27 @@ class ImagesHandler(ImagingHandler):
 
         return translated
 
-    @gen.coroutine  # NOQA
+    @gen.coroutine
     def check_image(self, kw):
+        translated_kw = self.translate(kw)
+
         if self.context.config.MAX_ID_LENGTH > 0:
             # Check if an image with an uuid exists in storage
-            truncated_image = kw['image'][:self.context.config.MAX_ID_LENGTH]
+            truncated_image = translated_kw['image'][:self.context.config.MAX_ID_LENGTH]
             maybe_future = self.context.modules.storage.exists(truncated_image)
             exists = yield gen.maybe_future(maybe_future)
             if exists:  # pragma: no cover
-                kw['image'] = kw['image'][:self.context.config.MAX_ID_LENGTH]
+                translated_kw['image'] = translated_kw['image'][:self.context.config.MAX_ID_LENGTH]
 
-        kw['image'] = quote(kw['image'].encode('utf-8'))
-        if not self.validate(kw['image']):  # pragma: no cover
+        translated_kw['image'] = quote(translated_kw['image'].encode('utf-8'))
+        if not self.validate(translated_kw['image']):  # pragma: no cover
             self._error(
                 400,
                 'No original image was specified in the given URL'
             )
             return
 
-        kw['request'] = self.request
-        self.context.request = RequestParameters(**kw)
+        translated_kw['request'] = self.request
+        self.context.request = RequestParameters(**translated_kw)
 
         self.execute_image_operations()

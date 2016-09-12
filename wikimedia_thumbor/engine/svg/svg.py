@@ -15,26 +15,12 @@ import cairosvg
 import locale
 import StringIO
 
-from bs4 import BeautifulSoup
-
 from thumbor.utils import logger
 
 from wikimedia_thumbor.engine import BaseWikimediaEngine
 
-BaseWikimediaEngine.add_format(
-    'image/svg+xml',
-    '.svg',
-    lambda buffer: Engine.is_svg(buffer)
-)
-
 
 class Engine(BaseWikimediaEngine):
-    @classmethod
-    def is_svg(cls, buffer):
-        soup = BeautifulSoup(buffer, 'xml')
-
-        return soup.svg is not None
-
     def create_image(self, buffer):
         self.original_buffer = buffer
 
