@@ -56,7 +56,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.CHROMA_SUBSAMPLING = '4:2:0'
         cfg.QUALITY = 79
         cfg.QUALITY_LOW = 40
-        cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.6,0.01,false,0.85)'
+        cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.0,0.8,1.0,0.0,0.85)'
 
         cfg.COMMUNITY_EXTENSIONS = [
             'wikimedia_thumbor.handler.multi',

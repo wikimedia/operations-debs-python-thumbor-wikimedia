@@ -9,13 +9,10 @@
 # Copyright (c) 2011 globo.com timehome@corp.globo.com
 # Copyright (c) 2015 Wikimedia Foundation
 
-# This is a fork of the thumbor.filters.sharpen filter
-# This version only applies the sharpening if the thumbnail resize
-# ratio is smaller than the resize ratio threshold passed as the
-# last parameter
+# This sharpens if the thumbnail resize ratio is smaller than the resize
+# ratio threshold passed as the last parameter
 
 from thumbor.filters import BaseFilter, filter_method
-from thumbor.ext.filters import _sharpen
 
 
 class Filter(BaseFilter):
@@ -23,14 +20,16 @@ class Filter(BaseFilter):
     @filter_method(
         BaseFilter.DecimalNumber,
         BaseFilter.DecimalNumber,
-        BaseFilter.Boolean,
-        BaseFilter.DecimalNumber
+        BaseFilter.DecimalNumber,
+        BaseFilter.DecimalNumber,
+        BaseFilter.DecimalNumber,
     )
     def conditional_sharpen(
             self,
-            amount,
             radius,
-            luminance_only,
+            sigma,
+            amount,
+            threshold,
             resize_ratio_threshold):
 
         width, height = self.engine.size
@@ -44,14 +43,15 @@ class Filter(BaseFilter):
         except AttributeError:
             original_height = self.engine.source_height
 
-        mode, data = self.engine.image_data_as_rgb()
         source_sum = float(original_width + original_height)
         destination_sum = float(width + height)
         resize_ratio = destination_sum / source_sum
 
         if resize_ratio < resize_ratio_threshold:
-            imgdata = _sharpen.apply(
-                mode, width, height, amount, radius,
-                luminance_only, data
+            # convert -unsharp (radius)x(sigma)+(amount)+(threshold)
+            self.engine.image.unsharp_mask(
+                radius=radius,
+                sigma=sigma,
+                amount=amount,
+                threshold=threshold
             )
-            self.engine.set_image_data(imgdata)

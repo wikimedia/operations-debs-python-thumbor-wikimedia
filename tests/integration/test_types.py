@@ -4,7 +4,7 @@ from . import WikimediaTestCase
 class WikimediaTest(WikimediaTestCase):
     def test_jpg(self):
         self.run_and_check_ssim_and_size(
-            ('unsafe/400x/filters:conditional_sharpen(0.6,0.01,false,0.85)/'
+            ('unsafe/400x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
                 'Christophe_Henner_-_June_2016.jpg'),
             '400px-Christophe_Henner_-_June_2016.jpg',
             0.98,
@@ -160,7 +160,7 @@ class WikimediaTest(WikimediaTestCase):
     def test_transparent_png(self):
         # We add a no-op filter to trigger image_data_as_rgb on an RGBA image
         self.run_and_check_ssim_and_size(
-            'unsafe/400x/filters:conditional_sharpen(0.0,0.0,false,0.0)/' +
+            'unsafe/400x/filters:conditional_sharpen(0.0,0.0,0.0,0.0,0.0)/' +
             'PNG_transparency_demonstration_1.png',
             '400px-PNG_transparency_demonstration_1.png',
             0.99,

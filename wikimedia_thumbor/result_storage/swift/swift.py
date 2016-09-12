@@ -53,26 +53,31 @@ class Storage(BaseStorage):
         if not hasattr(self.context, 'wikimedia_thumbnail_container'):
             return
 
-        # We store the xkey alongside the object if it's set.
-        # This way when an thumbnail falls our of Varnish and is picked
-        # up from Swift again, it will have an xkey. Which lets us avoid
-        # computing the xkey in Varnish. It always comes from Thumbor.
-        headers = None
-        xkey = self.context.request_handler._headers.get_list('xkey')
+        try:
+            # We store the xkey alongside the object if it's set.
+            # This way when an thumbnail falls our of Varnish and is picked
+            # up from Swift again, it will have an xkey. Which lets us avoid
+            # computing the xkey in Varnish. It always comes from Thumbor.
+            headers = None
+            xkey = self.context.request_handler._headers.get_list('xkey')
 
-        if len(xkey):
-            headers = {'xkey': xkey[0]}
+            if len(xkey):
+                headers = {'xkey': xkey[0]}
 
-        self.swift.put_object(
-            self.context.wikimedia_thumbnail_container,
-            self.context.wikimedia_path,
-            bytes,
-            headers=headers
-        )
+            self.swift.put_object(
+                self.context.wikimedia_thumbnail_container,
+                self.context.wikimedia_path,
+                bytes,
+                headers=headers
+            )
 
-        # We cannot set the time spent in putting to swift in the response
-        # headers, because the response has already been sent when saving to
-        # Swift happens (which is the right thing to do).
+            # We cannot set the time spent in putting to swift in the response
+            # headers, because the response has already been sent when saving
+            # to Swift happens (which is the right thing to do).
+        except Exception as e:
+            logger.error('[Swift] put exception: %r' % e)
+            # We cannnot let exceptions bubble up, because they would leave
+            # the client's connection hanging
 
     @return_future
     def get(self, callback):

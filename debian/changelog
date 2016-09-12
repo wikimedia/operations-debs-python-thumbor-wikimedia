@@ -1,3 +1,11 @@
+python-thumbor-wikimedia (0.1.17-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * 40-wikimedia.conf
+    - use new conditional_sharpen syntax
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 12 Sep 2016 09:03:19 +0000
+
 python-thumbor-wikimedia (0.1.16-1) unstable; urgency=low
 
   * New upstream release

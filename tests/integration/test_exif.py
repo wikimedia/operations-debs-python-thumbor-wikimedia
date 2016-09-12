@@ -60,7 +60,7 @@ class WikimediaExifTest(WikimediaTestCase):
 
     def test_adobe_rgb(self):
         self.run_and_check_ssim_size_and_exif(
-            'unsafe/300x/filters:conditional_sharpen(0.6,0.01,false,0.85)/'
+            'unsafe/300x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
             + 'Physical_map_tagged_AdobeRGB.jpg',
             '300px-Physical_map_tagged_AdobeRGB.jpg',
             0.97,
@@ -99,14 +99,11 @@ class WikimediaExifTest(WikimediaTestCase):
 
     def test_exif_filtering(self):
         self.run_and_check_ssim_size_and_exif(
-            'unsafe/800x/filters:conditional_sharpen(0.6,0.01,false,0.85)/'
+            'unsafe/800x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
             + 'Munich_subway_station_Westfriedhof.jpg',
             '800px-Munich_subway_station_Westfriedhof.jpg',
-            # The "low" score is due to the sharpening algorithm being
-            # different between Mediawiki and Thumbor. Mediawiki generates
-            # visual artifacts not seen in the Thumbor version
-            0.92,
-            1.0,
+            0.97,
+            1.1,
             {
                 'Artist': 'Martin Falbisoner',
                 'Copyright': 'some rights reserved'
@@ -116,7 +113,7 @@ class WikimediaExifTest(WikimediaTestCase):
 
     def test_exif_rotation(self):
         self.run_and_check_ssim_size_and_exif(
-            'unsafe/40x/filters:conditional_sharpen(0.6,0.01,false,0.85)/'
+            'unsafe/40x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
             + 'EXIF_rotation_180.jpg',
             '40px-EXIF_rotation_180.jpg',
             0.99,
@@ -134,7 +131,7 @@ class WikimediaExifTest(WikimediaTestCase):
             tinyrgb = tinyrgb_file.read()
 
         self.run_and_check_ssim_size_and_exif(
-            'unsafe/400x/filters:conditional_sharpen(0.6,0.01,false,0.85)/'
+            'unsafe/400x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
             + 'Christophe_Henner_-_June_2016.jpg',
             '400px-Christophe_Henner_-_June_2016.jpg',
             0.98,

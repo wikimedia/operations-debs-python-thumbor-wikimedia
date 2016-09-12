@@ -27,7 +27,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         cfg.SWIFT_RETRIES = 0
 
         cfg.QUALITY_LOW = 10
-        cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.6,0.01,false,0.85)'
+        cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.0,0.8,1.0,0.0,0.85)'
 
         return cfg
 
@@ -96,7 +96,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             '400',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
             + 'd/d3/1Mcolors.jpg',
-            'quality(10):conditional_sharpen(0.6,0.01,false,0.85):format(jpg)'
+            'quality(10):conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)'
         )
 
     def test_page(self):
@@ -147,7 +147,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             '400',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
             + 'd/d3/1Mcolors.jpe',
-            'conditional_sharpen(0.6,0.01,false,0.85):format(jpg)'
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)'
         )
 
     def test_meta(self):
