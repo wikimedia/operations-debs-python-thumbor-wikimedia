@@ -13,6 +13,7 @@
 # ratio threshold passed as the last parameter
 
 from thumbor.filters import BaseFilter, filter_method
+from thumbor.utils import logger
 
 
 class Filter(BaseFilter):
@@ -22,7 +23,7 @@ class Filter(BaseFilter):
         BaseFilter.DecimalNumber,
         BaseFilter.DecimalNumber,
         BaseFilter.DecimalNumber,
-        BaseFilter.DecimalNumber,
+        BaseFilter.DecimalNumber
     )
     def conditional_sharpen(
             self,
@@ -36,18 +37,21 @@ class Filter(BaseFilter):
         try:
             original_width = self.context.request.source_width
         except AttributeError:
+            logger.debug('[conditional_sharpen] width fallback')
             original_width = self.engine.source_width
 
         try:
             original_height = self.context.request.source_height
         except AttributeError:
             original_height = self.engine.source_height
+            logger.debug('[conditional_sharpen] height fallback')
 
         source_sum = float(original_width + original_height)
         destination_sum = float(width + height)
         resize_ratio = destination_sum / source_sum
 
         if resize_ratio < resize_ratio_threshold:
+            logger.debug('[conditional_sharpen] apply unsharp mask')
             # convert -unsharp (radius)x(sigma)+(amount)+(threshold)
             self.engine.image.unsharp_mask(
                 radius=radius,
@@ -55,3 +59,5 @@ class Filter(BaseFilter):
                 amount=amount,
                 threshold=threshold
             )
+        else:
+            logger.debug('[conditional_sharpen] skip, ratio below limit')

@@ -73,7 +73,7 @@ class ImagesHandler(ImagingHandler):
         return path
 
     def translate(self, kw):
-        logger.debug('[ImagesHandlers] translate: %r' % kw)
+        logger.debug('[ImagesHandler] translate: %r' % kw)
 
         filepath = '/'.join(
             (
@@ -117,17 +117,19 @@ class ImagesHandler(ImagingHandler):
 
         filters = []
 
-        if kw['format'] in ('jpe', 'jpeg'):
+        if kw['format'].lower() in ('jpe', 'jpeg'):
             kw['format'] = 'jpg'
 
-        if kw['extension'] in ('jpg', 'jpe', 'jpeg'):
+        if kw['extension'].lower() in ('jpg', 'jpe', 'jpeg'):
             if (
                 kw['qlow'] == 'qlow-' and
                 hasattr(self.context.config, 'QUALITY_LOW')
             ):
+                logger.debug('[ImagesHandler] apply JPG low quality')
                 filters.append('quality(%d)' % self.context.config.QUALITY_LOW)
 
             if hasattr(self.context.config, 'DEFAULT_FILTERS_JPEG'):
+                logger.debug('[ImagesHandler] apply JPG default filters')
                 filters.append(self.context.config.DEFAULT_FILTERS_JPEG)
 
         filters.append('format(%s)' % kw['format'])

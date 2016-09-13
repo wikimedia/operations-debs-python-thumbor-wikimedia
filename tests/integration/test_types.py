@@ -5,7 +5,7 @@ class WikimediaTest(WikimediaTestCase):
     def test_jpg(self):
         self.run_and_check_ssim_and_size(
             ('unsafe/400x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-                'Christophe_Henner_-_June_2016.jpg'),
+                'Christophe_Henner_-_June_2016.JPG'),
             '400px-Christophe_Henner_-_June_2016.jpg',
             0.98,
             1.0

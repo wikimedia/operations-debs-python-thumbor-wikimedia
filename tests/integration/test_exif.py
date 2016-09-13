@@ -7,11 +7,6 @@ from . import WikimediaTestCase
 
 
 class WikimediaExifTest(WikimediaTestCase):
-    def get_config(self):
-        cfg = super(WikimediaExifTest, self).get_config()
-        cfg.EXIFTOOL_STAY_OPEN = True
-        return cfg
-
     def run_and_check_ssim_size_and_exif(
         self,
         url,
@@ -132,7 +127,7 @@ class WikimediaExifTest(WikimediaTestCase):
 
         self.run_and_check_ssim_size_and_exif(
             'unsafe/400x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-            + 'Christophe_Henner_-_June_2016.jpg',
+            + 'Christophe_Henner_-_June_2016.JPG',
             '400px-Christophe_Henner_-_June_2016.jpg',
             0.98,
             1.0,
