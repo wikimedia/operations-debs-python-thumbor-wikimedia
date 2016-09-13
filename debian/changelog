@@ -1,3 +1,12 @@
+python-thumbor-wikimedia (0.1.19-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/40-wikimedia.conf
+    - remove EXIFTOOL_STAY_OPEN
+    - fix SLOW_PROCESSING_LIMIT value
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Tue, 13 Sep 2016 10:43:00 +0000
+
 python-thumbor-wikimedia (0.1.18-1) jessie-wikimedia; urgency=low
 
   * New upstream release
