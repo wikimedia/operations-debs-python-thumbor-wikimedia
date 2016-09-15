@@ -29,12 +29,20 @@ from wikimedia_thumbor.shell_runner import ShellRunner
 
 class ExiftoolRunner:
     @classmethod
-    def command(cls, pre=[], post=[], context=None, buffer=''):
+    def command(
+        cls,
+        pre=[],
+        post=[],
+        context=None,
+        buffer='',
+        input_temp_file=None
+    ):
         start = datetime.datetime.now()
 
-        input_temp_file = NamedTemporaryFile()
-        input_temp_file.write(buffer)
-        input_temp_file.flush()
+        if not input_temp_file:
+            input_temp_file = NamedTemporaryFile()
+            input_temp_file.write(buffer)
+            input_temp_file.flush()
 
         command = [context.config.EXIFTOOL_PATH]
         command += pre

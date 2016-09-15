@@ -1,3 +1,16 @@
+python-thumbor-wikimedia (0.1.21-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/control
+    - remove dependency on python-djvu, python-gi, python-cairosvg, python-lxml
+  * debian/rules
+    - ignore new tests that require network connectivity
+  * debian/40-wikimedia.conf
+    - remove all config except paths, it makes more sense to define the
+      rest in puppet
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Tue, 20 Sep 2016 10:16:00 +0000
+
 python-thumbor-wikimedia (0.1.19-1) jessie-wikimedia; urgency=low
 
   * New upstream release

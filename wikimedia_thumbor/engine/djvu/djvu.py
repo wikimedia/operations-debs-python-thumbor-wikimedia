@@ -11,11 +11,6 @@
 
 # DjVu engine
 
-# Otherwise Python thinks that djvu is the local module
-from __future__ import absolute_import
-
-import djvu.decode
-
 from wikimedia_thumbor.engine import BaseWikimediaEngine
 
 
@@ -33,48 +28,23 @@ BaseWikimediaEngine.add_format(
 
 
 class Engine(BaseWikimediaEngine):
-    pixel_format = djvu.decode.PixelFormatRgb('RGB')
-    pixel_format.rows_top_to_bottom = 1
-    pixel_format.y_top_to_bottom = 1
-
     def create_image(self, buffer):
         self.original_buffer = buffer
-        # Unfortunately the djvu python bindings don't support reading
-        # file contents from memory, nor from a fifo. Which means we have to
-        # store the input in a temporary file
         self.prepare_source(buffer)
 
         try:
-            page = self.context.request.page - 1
+            page = self.context.request.page
         except AttributeError:
-            page = 0
+            page = 1
 
-        context = djvu.decode.Context()
-        file_uri = djvu.decode.FileURI(self.source)
-        document = context.new_document(file_uri, cache=False)
-        document.decoding_job.wait()
+        command = [
+            self.context.config.DDJVU_PATH,
+            '-format=ppm',
+            '-page=%d' % page,
+            self.source,
+            '-'
+        ]
 
-        # If we try to read a page out of bounds, use the first page
-        if page < 0 or page > len(document.pages) - 1:
-            page = 0
-
-        document_page = document.pages[page]
-        page_job = document_page.decode(wait=True)
-
-        width, height = page_job.size
-        rect = (0, 0, width, height)
-
-        data = page_job.render(
-            djvu.decode.RENDER_COLOR,
-            rect,
-            rect,
-            self.pixel_format
-        )
-
-        # PBM is a very simple file format, which ImageMagick can consume
-        ppm = 'P6 %d %d 255\n' % (width, height)
-        ppm += data
-
-        self.cleanup_source()
+        ppm = self.command(command)
 
         return super(Engine, self).create_image(ppm)

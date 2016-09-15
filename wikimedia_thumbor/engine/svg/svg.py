@@ -11,44 +11,26 @@
 
 # SVG engine
 
-import cairosvg
-import locale
-import StringIO
-
-from thumbor.utils import logger
-
 from wikimedia_thumbor.engine import BaseWikimediaEngine
+
+BaseWikimediaEngine.add_format(
+    'image/svg+xml',
+    '.svg',
+    lambda buffer: Engine.is_svg(buffer)
+)
 
 
 class Engine(BaseWikimediaEngine):
+    @classmethod
+    def is_svg(cls, buffer):
+        # Quite wide, but it's better to let rsvg give a file a shot
+        # rather than bail without trying
+        return (buffer.startswith('<?xml') and
+                'http://www.w3.org/2000/svg' in buffer[:1024])
+
     def create_image(self, buffer):
         self.original_buffer = buffer
 
-        if hasattr(self.context.config, 'RSVG_CONVERT_PATH'):
-            logger.debug('[SVG] Converting with rsvg')
-            png = self.create_image_with_rsvg(buffer)
-        else:
-            logger.debug('[SVG] Converting with cairosvg')
-            png = self.create_image_with_cairosvg(buffer)
-
-        return super(Engine, self).create_image(png)
-
-    def create_image_with_cairosvg(self, buffer):
-        cairosvg.features.LOCALE = 'en_US'
-
-        if hasattr(self.context.request, 'lang'):
-            request_locale = self.context.request.lang.upper()
-            normalized_locale = locale.normalize(request_locale)
-            cairosvg.features.LOCALE = normalized_locale
-
-        output = StringIO.StringIO()
-
-        return cairosvg.svg2png(
-            bytestring=buffer,
-            dpi=self.context.config.SVG_DPI
-        )
-
-    def create_image_with_rsvg(self, buffer):
         self.prepare_source(buffer)
 
         command = [
@@ -68,7 +50,9 @@ class Engine(BaseWikimediaEngine):
         if hasattr(self.context.request, 'lang'):
             env = {'LANG': self.context.request.lang.upper()}
 
-        return self.command(command, env)
+        png = self.command(command, env)
+
+        return super(Engine, self).create_image(png)
 
     # Disable this method in BaseEngine, do the conversion in create_image
     # instead

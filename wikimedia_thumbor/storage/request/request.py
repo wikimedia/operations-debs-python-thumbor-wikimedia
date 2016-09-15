@@ -37,8 +37,9 @@ class Storage(BaseStorage):
     def get(self, path, callback):
         logger.debug("[REQUEST_STORAGE] get: %s" % path)
         try:
+            value = self.dict[path]
             logger.debug("[REQUEST_STORAGE] found")
-            callback(self.dict[path])
+            callback(value)
         except KeyError:
             logger.debug("[REQUEST_STORAGE] missing")
             callback(None)

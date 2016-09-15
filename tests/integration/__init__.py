@@ -1,4 +1,3 @@
-import logging
 import platform
 import os.path
 
@@ -45,6 +44,8 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.FFPROBE_PATH = which('ffprobe')
         cfg.XCF2PNG_PATH = which('xcf2png')
         cfg.GHOSTSCRIPT_PATH = which('gs')
+        cfg.DDJVU_PATH = which('ddjvu')
+        cfg.RSVG_CONVERT_PATH = which('rsvg-convert')
         timeout = which(
             'gtimeout' if platform.system() == 'Darwin' else 'timeout'
         )
@@ -84,11 +85,11 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
         cfg.FILTERS = [
             'wikimedia_thumbor.filter.conditional_sharpen',
+            'wikimedia_thumbor.filter.format',
             'wikimedia_thumbor.filter.lang',
             'wikimedia_thumbor.filter.page',
             'wikimedia_thumbor.filter.crop',
             'wikimedia_thumbor.filter.flip',
-            'thumbor.filters.format',
             'thumbor.filters.quality',
             'thumbor.filters.rotate'
         ]

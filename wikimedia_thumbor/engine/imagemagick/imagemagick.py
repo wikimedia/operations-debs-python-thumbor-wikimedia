@@ -98,6 +98,14 @@ class Engine(BaseEngine):
     exiftool = ExiftoolRunner()
 
     def create_image(self, buffer):
+        # This should be enough for now, if memory blows up on huge files we
+        # can could use an mmap here
+        if hasattr(self.context, 'wikimedia_original_file'):
+            fname = self.context.wikimedia_original_file.name
+            with open(fname, 'r') as content_file:
+                buffer = content_file.read()
+            ShellRunner.rm_f(fname)
+
         self.im_original_buffer = buffer
         self.exif = {}
 
@@ -118,7 +126,7 @@ class Engine(BaseEngine):
 
     def jpeg_size(self, im, exif_image_size):
         buffer_size = exif_image_size.split('x')
-        buffer_size = [ float(x) for x in buffer_size ]
+        buffer_size = [float(x) for x in buffer_size]
         buffer_ratio = buffer_size[0] / buffer_size[1]
 
         width = float(self.context.request.width)
@@ -262,7 +270,8 @@ class Engine(BaseEngine):
         return result
 
     def crop(self, crop_left, crop_top, crop_right, crop_bottom):
-        logger.debug('[IM] crop: %r %r %r %r' % (
+        logger.debug(
+            '[IM] crop: %r %r %r %r' % (
                 crop_left,
                 crop_top,
                 crop_right,
@@ -349,7 +358,3 @@ class Engine(BaseEngine):
     @property
     def size(self):
         return self.image.size
-
-    def cleanup(self):  # pragma: no cover
-        logger.debug('[IM] cleanup')
-        Engine.exiftool.cleanup()

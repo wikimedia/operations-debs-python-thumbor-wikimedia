@@ -81,7 +81,11 @@ class Storage(BaseStorage):
 
     @return_future
     def get(self, callback):
-        logger.debug('[Swift] get')
+        logger.debug('[Swift] get: %r %r' % (
+                self.context.wikimedia_thumbnail_container,
+                self.context.wikimedia_path
+            )
+        )
 
         try:
             start = datetime.datetime.now()
@@ -102,6 +106,7 @@ class Storage(BaseStorage):
                 'Swift-Time', duration
             )
 
+            logger.debug('[Swift] found')
             callback(data)
         # We want this to be exhaustive because not catching an exception here
         # would result in the request hanging indefinitely
@@ -109,6 +114,7 @@ class Storage(BaseStorage):
             logging.disable(logging.NOTSET)
             # No need to log this one, it's expected behavior when the
             # requested object isn't there
+            logger.debug('[Swift] missing')
             callback(None)
         except Exception as e:
             logging.disable(logging.NOTSET)

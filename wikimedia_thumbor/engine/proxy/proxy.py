@@ -51,7 +51,10 @@ class Engine(BaseEngine):
         if self.lcl['selected_engine'] is not None:
             return self.lcl['selected_engine']
 
-        ext = self.lcl['extension'].lstrip('.')
+        if self.lcl['extension'] is None:
+            ext = None
+        else:
+            ext = self.lcl['extension'].lstrip('.')
 
         logger.debug('[Proxy] Looking for a %s engine' % ext)
 

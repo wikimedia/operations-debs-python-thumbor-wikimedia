@@ -1,3 +1,5 @@
+import platform
+
 from . import WikimediaTestCase
 
 
@@ -34,7 +36,7 @@ class WikimediaTest(WikimediaTestCase):
     def test_djvu_with_out_of_bounds_page(self):
         self.run_and_check_ssim_and_size(
             'unsafe/400x/filters:page(500)/Il_cavallarizzo.djvu',
-            'page1-400px-Il_cavallarizzo.djvu.jpg',
+            'page259-400px-Il_cavallarizzo.djvu.jpg',
             # Mediawiki generates incorrect dimensions in this test case
             # resulting in soft djvu thumbs
             0.87,
@@ -45,8 +47,14 @@ class WikimediaTest(WikimediaTestCase):
         self.run_and_check_ssim_and_size(
             'unsafe/200x/filters:lang(fr):format(png)/Speech_bubbles.svg',
             'langfr-200px-Speech_bubbles.svg.png',
-            # Low score due to font differences
-            0.76,
+            (0.6 if platform.system() == 'Darwin' else 0.99),
+            1.1
+        )
+        self.run_and_check_ssim_and_size(
+            'unsafe/200x/filters:format(png)/Television.svg',
+            '200px-Television.svg.png',
+            # This file is only there to test SVG syntax
+            0.36,
             1.1
         )
 
@@ -54,7 +62,17 @@ class WikimediaTest(WikimediaTestCase):
         self.run_and_check_ssim_and_size(
             'unsafe/400x/filters:page(3)/Internationalisation.pdf',
             'page3-400px-Internationalisation.pdf.jpg',
-            0.95,
+            # Low score because framing is slightly different, and includes
+            # more content in the Thumbor case
+            0.87,
+            1.0
+        )
+
+    def test_pdf2(self):
+        self.run_and_check_ssim_and_size(
+            'unsafe/400x/filters:page(19)/Jeremy_Bentham.pdf',
+            'page19-400px-Jeremy_Bentham.pdf.jpg',
+            0.96,
             1.0
         )
 
@@ -62,7 +80,9 @@ class WikimediaTest(WikimediaTestCase):
         self.run_and_check_ssim_and_size(
             'unsafe/400x/Internationalisation.pdf',
             'page1-400px-Internationalisation.pdf.jpg',
-            0.95,
+            # Low score because framing is slightly different, and includes
+            # more content in the Thumbor case
+            0.86,
             1.0
         )
 
@@ -70,7 +90,9 @@ class WikimediaTest(WikimediaTestCase):
         self.run_and_check_ssim_and_size(
             'unsafe/400x/filters:page(500)/Internationalisation.pdf',
             'page1-400px-Internationalisation.pdf.jpg',
-            0.95,
+            # Low score because framing is slightly different, and includes
+            # more content in the Thumbor case
+            0.86,
             1.0
         )
 

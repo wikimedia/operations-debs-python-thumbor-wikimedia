@@ -16,6 +16,8 @@ from thumbor.context import RequestParameters
 from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
 
+class TranslateError(Exception):
+    pass
 
 class ImagesHandler(ImagingHandler):
     @classmethod
@@ -84,6 +86,9 @@ class ImagesHandler(ImagingHandler):
         )
 
         translated = {'width': kw['width']}
+
+        if int(kw['width']) < 1:
+            raise TranslateError('Width requested must be at least 1')
 
         sharded_containers = []
 
@@ -193,7 +198,14 @@ class ImagesHandler(ImagingHandler):
 
     @gen.coroutine
     def check_image(self, kw):
-        translated_kw = self.translate(kw)
+        try:
+            translated_kw = self.translate(kw)
+        except TranslateError as e:
+            self._error(
+                400,
+                str(e)
+            )
+            return
 
         if self.context.config.MAX_ID_LENGTH > 0:
             # Check if an image with an uuid exists in storage

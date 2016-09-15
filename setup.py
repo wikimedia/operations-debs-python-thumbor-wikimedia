@@ -11,7 +11,7 @@ tests_require = [
 
 setup(
     name='wikimedia_thumbor',
-    version='0.1.19',
+    version='0.1.21',
     url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
     license='MIT',
     author='Gilles Dubuc, Wikimedia Foundation',
@@ -21,11 +21,7 @@ setup(
     zip_safe=False,
     platforms='any',
     install_requires=[
-        'cairosvg',
-        'gi',
         'libthumbor>=1.3.2',
-        'lxml',
-        'python-djvulibre',
         'python-swiftclient',
         'thumbor>=6.0.1',
         'wand'

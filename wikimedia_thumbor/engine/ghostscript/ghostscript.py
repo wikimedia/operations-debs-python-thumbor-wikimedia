@@ -30,17 +30,19 @@ class Engine(BaseWikimediaEngine):
         except AttributeError:
             page = 1
 
-        png = self.get_png_for_page(buffer, page)
+        jpg = self.get_jpg_for_page(buffer, page)
 
         # GS is being unhelpful and outputting that error to stdout
         # with a 0 exit status
         error = 'No pages will be processed (FirstPage > LastPage)'
-        if len(png) < 200 and png.find(error) != -1:
-            png = self.get_png_for_page(buffer, 1)
+        if len(jpg) < 200 and jpg.find(error) != -1:
+            jpg = self.get_jpg_for_page(buffer, 1)
 
-        return super(Engine, self).create_image(png)
+        self.extension = '.jpg'
 
-    def get_png_for_page(self, buffer, page):
+        return super(Engine, self).create_image(jpg)
+
+    def get_jpg_for_page(self, buffer, page):
         self.prepare_source(buffer)
 
         # We use the command and not the python bindings because those can't
@@ -51,7 +53,8 @@ class Engine(BaseWikimediaEngine):
         # file for the destination.
         command = [
             self.context.config.GHOSTSCRIPT_PATH,
-            "-sDEVICE=png16m",
+            "-sDEVICE=jpeg",
+            "-dJPEG=90",
             "-sOutputFile=%stdout",
             "-dFirstPage=%d" % page,
             "-dLastPage=%d" % page,

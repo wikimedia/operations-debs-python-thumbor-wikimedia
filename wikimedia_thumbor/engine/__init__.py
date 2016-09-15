@@ -73,6 +73,13 @@ class BaseWikimediaEngine(IMEngine):
         return super(BaseWikimediaEngine, self).read(extension, quality)
 
     def prepare_source(self, buffer):
+        if hasattr(self.context, 'wikimedia_original_file'):
+            logger.debug('[BWE] Found source file in context')
+            self.source = self.context.wikimedia_original_file.name
+            del self.context.wikimedia_original_file
+            return
+
+        logger.debug('[BWE] Create source file from buffer')
         self.source = os.path.join(self.temp_dir, 'source_file')
 
         with open(self.source, 'w') as source:
@@ -85,7 +92,7 @@ class BaseWikimediaEngine(IMEngine):
     def cleanup(self):  # pragma: no cover
         shutil.rmtree(self.temp_dir, True)
 
-    def command(self, command, env=None):
+    def command(self, command, env=None, clean_on_error=True):
         returncode, stderr, stdout = ShellRunner.command(
             command,
             self.context,
@@ -93,7 +100,8 @@ class BaseWikimediaEngine(IMEngine):
         )
 
         if returncode != 0:
-            self.cleanup_source()
+            if clean_on_error:
+                self.cleanup_source()
             raise CommandError(
                 command,
                 stdout,

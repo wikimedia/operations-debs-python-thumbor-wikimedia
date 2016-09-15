@@ -11,7 +11,6 @@
 
 # VIPS engine
 
-import logging
 import math
 import os
 
@@ -21,33 +20,6 @@ from wikimedia_thumbor.engine import BaseWikimediaEngine
 from wikimedia_thumbor.engine import CommandError
 from wikimedia_thumbor.shell_runner import ShellRunner  # noqa
 
-
-use_command_line = True
-
-try:  # pragma: no cover
-    import gi
-    if hasattr(gi, 'require_version'):
-        logger.debug('[VIPS] gi found')
-        try:
-            gi.require_version('Vips', '8.0')
-            logging.disable(logging.DEBUG)
-            from gi.repository import Vips
-            logging.disable(logging.NOTSET)
-            logger.debug('[VIPS] VIPS found in gi repository')
-            use_command_line = False
-        except ImportError:
-            logger.debug('[VIPS] VIPS not found in gi repository')
-        except ValueError:
-            logger.debug('[VIPS] VIPS 8.0+ not found in gi repository')
-    else:
-        logger.debug('[VIPS] Wrong gi found (not PyGObject)')
-except ImportError:  # pragma: no cover
-    logger.debug('[VIPS] gi not found')
-
-if use_command_line:
-    logger.debug('[VIPS] Will use command line')
-else:  # pragma: no cover
-    logger.debug('[VIPS] Will use bindings')
 
 BaseWikimediaEngine.add_format(
     'image/tiff',
@@ -69,11 +41,18 @@ class Engine(BaseWikimediaEngine):
             '-s'
         ]
 
-        stdout = Engine.exiftool.command(
-            pre=command,
-            context=self.context,
-            buffer=buffer
-        )
+        if hasattr(self.context, 'wikimedia_original_file'):
+            stdout = Engine.exiftool.command(
+                pre=command,
+                context=self.context,
+                input_temp_file=self.context.wikimedia_original_file
+            )
+        else:
+            stdout = Engine.exiftool.command(
+                pre=command,
+                context=self.context,
+                buffer=buffer
+            )
 
         size = stdout.strip().split('x')
 
@@ -90,13 +69,17 @@ class Engine(BaseWikimediaEngine):
 
         return False
 
+    def target_format(self):
+        if self.context.request.format:
+            return '.%s' % self.context.request.format
+
+        return self.context.request.extension
+
     def create_image(self, buffer):
-        try:
-            original_ext = self.context.request.extension
-        except AttributeError:  # pragma: no cover
-            # If there is no extension in the request, it means that we
-            # are serving a cached result. In which case no VIPS processing
-            # is required.
+        # If there is no extension in the request, it means that we
+        # are serving a cached result. In which case no VIPS processing
+        # is required.
+        if not hasattr(self.context.request, 'extension'):
             return super(Engine, self).create_image(buffer)
 
         self.original_buffer = buffer
@@ -107,37 +90,14 @@ class Engine(BaseWikimediaEngine):
             float(self.context.request.width)
         ))
 
-        if use_command_line:
-            result = self.shrink_with_command(buffer, shrink_factor)
-        else:  # pragma: no cover
-            result = self.shrink_with_bindings(buffer, shrink_factor)
+        result = self.shrink(buffer, shrink_factor)
 
-        self.extension = original_ext
+        self.extension = self.target_format()
+        logger.debug('[VIPS] Setting extension to: %s' % self.extension)
 
         return super(Engine, self).create_image(result)
 
-    def shrink_with_bindings(self, buffer, shrink_factor):  # pragma: no cover
-        logger.debug('[VIPS] Shrinking with bindings')
-        logging.disable(logging.DEBUG)
-
-        if gi and hasattr(gi, 'overrides'):
-            exceptions = (AttributeError, gi.overrides.Vips.Error)
-        else:
-            exceptions = AttributeError
-
-        try:
-            page = self.context.request.page - 1
-            source = Vips.Image.new_from_buffer(buffer, 'page=%d' % page)
-        except exceptions:
-            source = Vips.Image.new_from_buffer(buffer, '')
-
-        source = source.shrink(shrink_factor, shrink_factor)
-        result = source.write_to_buffer('.png')
-
-        logging.disable(logging.NOTSET)
-        return result
-
-    def shrink_with_command(self, buffer, shrink_factor):
+    def shrink(self, buffer, shrink_factor):
         logger.debug('[VIPS] Shrinking with command')
         self.prepare_source(buffer)
 
@@ -150,17 +110,24 @@ class Engine(BaseWikimediaEngine):
             source = self.source
 
         try:
-            return self.shrink_with_command_for_page(source, shrink_factor)
+            return self.shrink_for_page(source, shrink_factor)
         except CommandError:
             # The page is probably out of bounds, try again without
             # specifying a page
-            self.prepare_source(buffer)
             source = self.source
 
-        return self.shrink_with_command_for_page(source, shrink_factor)
+        try:
+            return self.shrink_for_page(source, shrink_factor)
+        except CommandError as e:
+            # Now that we've failed twice in a row, we cleanup the source
+            self.cleanup_source()
+            raise e
 
-    def shrink_with_command_for_page(self, source, shrink_factor):
-        destination = os.path.join(self.temp_dir, 'vips_result.png')
+    def shrink_for_page(self, source, shrink_factor):
+        destination = os.path.join(
+            self.temp_dir,
+            'vips_result%s' % self.target_format()
+        )
 
         command = [
             self.context.config.VIPS_PATH,
@@ -172,7 +139,7 @@ class Engine(BaseWikimediaEngine):
         ]
 
         try:
-            self.command(command)
+            self.command(command, clean_on_error=False)
         except CommandError as e:  # pragma: no cover
             ShellRunner.rm_f(destination)
             raise e
