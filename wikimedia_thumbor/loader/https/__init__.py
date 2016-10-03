@@ -20,18 +20,41 @@ import tornado.simple_httpclient
 from thumbor.loaders import http_loader, https_loader
 from thumbor.utils import logger
 
+from wikimedia_thumbor.shell_runner import ShellRunner
+
 
 def should_run(url):  # pragma: no cover
     return True
 
 
+def cleanup_temp_file(path):
+    logger.debug('[HTTPS] cleanup_temp_file: %s' % path)
+    ShellRunner.rm_f(path)
+
+
 def return_contents(response, url, callback, context, f):  # pragma: no cover
-    # We put the first kb of content into the response body, to let Thumbor's
-    # mime detection work
+    excerpt_length = 1024
+
     f.seek(0)
-    response._body = f.read(1024)
-    context.wikimedia_original_file = f
+    body = f.read(excerpt_length)
     f.close()
+
+    # First kb of the body for MIME detection
+    response._body = body
+
+    if len(body) == excerpt_length:
+        logger.debug('[HTTPS] return_contents: %s' % f.name)
+        context.wikimedia_original_file = f
+
+        tornado.ioloop.IOLoop.instance().call_later(
+            context.config.HTTP_LOADER_TEMP_FILE_TIMEOUT,
+            partial(cleanup_temp_file, context.wikimedia_original_file.name)
+        )
+    else:
+        # If the body is small we can delete the temp file immediately
+        logger.debug('[HTTPS] return_contents: small body')
+        cleanup_temp_file(f.name)
+
     return http_loader.return_contents(response, url, callback, context)
 
 

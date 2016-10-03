@@ -1,3 +1,12 @@
+python-thumbor-wikimedia (0.1.22-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/control
+   - add python-urllib3 as build dependency
+   - add python-manhole as dependency
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 3 OCt 2016 11:04:00 +0000
+
 python-thumbor-wikimedia (0.1.21-1) jessie-wikimedia; urgency=low
 
   * New upstream release

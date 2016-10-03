@@ -55,7 +55,9 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         response = self.retrieve(url)
 
         xkey = response.headers.get_list('xkey')[0]
-        wikimedia_path = response.headers.get_list('Wikimedia-Path')[0]
+        wikimedia_thumbnail_save_path = response.headers.get_list(
+            'Wikimedia-Path'
+        )[0]
         wikimedia_thumbnail_container = response.headers.get_list(
             'Wikimedia-Thumbnail-Container'
         )[0]
@@ -64,8 +66,8 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         )
 
         assert xkey == expected_xkey, 'Incorrect Xkey: %s' % xkey
-        assert wikimedia_path == expected_path, \
-            'Wikimedia-Path: %s' % wikimedia_path
+        assert wikimedia_thumbnail_save_path == expected_path, \
+            'Wikimedia-Path: %s' % wikimedia_thumbnail_save_path
         assert wikimedia_thumbnail_container == expected_container, \
             'Wikimedia-Thumbnail-Container: %s' % wikimedia_thumbnail_container
         assert thumbor_parameters['width'] == expected_width, \
@@ -169,7 +171,21 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             'wikipedia-mediawiki-local-thumb',
             'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-mediawiki-local-public/'
-            + 'd/d3/1Mcolors.png',
+            'http://swifthost/swift/v1/api/path/'
+            + 'wikipedia-mediawiki-local-public/d/d3/1Mcolors.png',
             'format(png)'
+        )
+
+    def test_archive(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/archive/d/d3/20160729183014!1Mcolors.jpg/'
+            + '400px-1Mcolors.jpg',
+            'File:20160729183014!1Mcolors.jpg',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/archive/d/d3/20160729183014!1Mcolors.jpg/'
+            + '400px-1Mcolors.jpg',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
+            + 'archive/d/d3/20160729183014!1Mcolors.jpg',
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)'
         )

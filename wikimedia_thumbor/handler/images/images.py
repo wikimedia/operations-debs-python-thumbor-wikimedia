@@ -10,14 +10,15 @@
 from urllib import quote
 import json
 import tornado.gen as gen
-import tornado.web
 
 from thumbor.context import RequestParameters
 from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
 
+
 class TranslateError(Exception):
     pass
+
 
 class ImagesHandler(ImagingHandler):
     @classmethod
@@ -27,6 +28,7 @@ class ImagesHandler(ImagingHandler):
             r'(?P<project>[^-/]+)/'
             r'(?P<language>[^/]+)/'
             r'thumb/'
+            r'(?:(?P<specialpath>temp|archive)/)?'
             r'(?P<shard1>[0-9a-zA-Z]+)/'
             r'(?P<shard2>[0-9a-zA-Z]+)/'
             r'(?P<filename>.*)\.'
@@ -41,7 +43,7 @@ class ImagesHandler(ImagingHandler):
             r'\.(?P<format>[a-zA-Z]+)'
         )
 
-    def reconstruct_path(self, kw):
+    def generate_save_swift_path(self, kw):
         path = '/'.join(
             (
                 kw['shard1'],
@@ -50,6 +52,9 @@ class ImagesHandler(ImagingHandler):
                 ''
             )
         )
+
+        if kw['specialpath']:
+            path = '/'.join((kw['specialpath'], path))
 
         if kw['qlow'] == 'qlow-':
             path += kw['qlow']
@@ -84,6 +89,9 @@ class ImagesHandler(ImagingHandler):
                 kw['filename'] + '.' + kw['extension']
             )
         )
+
+        if kw['specialpath']:
+            filepath = '/'.join((kw['specialpath'], filepath))
 
         translated = {'width': kw['width']}
 
@@ -171,12 +179,13 @@ class ImagesHandler(ImagingHandler):
         # Save wikimedia-specific save path information
         # Which will later be used by result storage
         self.context.wikimedia_thumbnail_container = thumbnail_container
-        self.context.wikimedia_path = self.reconstruct_path(kw)
+        self.context.wikimedia_thumbnail_save_path = \
+            self.generate_save_swift_path(kw)
 
         if hasattr(self.context.config, 'SWIFT_PATH_PREFIX'):
-            self.context.wikimedia_path = (
+            self.context.wikimedia_thumbnail_save_path = (
                 self.context.config.SWIFT_PATH_PREFIX +
-                self.context.wikimedia_path
+                self.context.wikimedia_thumbnail_save_path
             )
 
         self.context.request_handler.set_header(
@@ -186,7 +195,7 @@ class ImagesHandler(ImagingHandler):
 
         self.context.request_handler.set_header(
             'Wikimedia-Path',
-            self.context.wikimedia_path
+            self.context.wikimedia_thumbnail_save_path
         )
 
         self.context.request_handler.set_header(
@@ -209,11 +218,12 @@ class ImagesHandler(ImagingHandler):
 
         if self.context.config.MAX_ID_LENGTH > 0:
             # Check if an image with an uuid exists in storage
-            truncated_image = translated_kw['image'][:self.context.config.MAX_ID_LENGTH]
+            image = translated_kw['image']
+            truncated_image = image[:self.context.config.MAX_ID_LENGTH]
             maybe_future = self.context.modules.storage.exists(truncated_image)
             exists = yield gen.maybe_future(maybe_future)
             if exists:  # pragma: no cover
-                translated_kw['image'] = translated_kw['image'][:self.context.config.MAX_ID_LENGTH]
+                translated_kw['image'] = truncated_image
 
         translated_kw['image'] = quote(translated_kw['image'].encode('utf-8'))
         if not self.validate(translated_kw['image']):  # pragma: no cover

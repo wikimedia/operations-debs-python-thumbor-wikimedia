@@ -5,13 +5,14 @@ from setuptools import setup, find_packages
 
 tests_require = [
     'nose',
-    'pyssim'
+    'pyssim',
+    'urllib3'
 ]
 
 
 setup(
     name='wikimedia_thumbor',
-    version='0.1.21',
+    version='0.1.22',
     url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
     license='MIT',
     author='Gilles Dubuc, Wikimedia Foundation',
@@ -22,8 +23,9 @@ setup(
     platforms='any',
     install_requires=[
         'libthumbor>=1.3.2',
+        'manhole',
         'python-swiftclient',
-        'thumbor>=6.0.1',
+        'thumbor==6.0.1',
         'wand'
     ],
     extras_require={

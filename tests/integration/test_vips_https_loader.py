@@ -7,6 +7,7 @@ class WikimediaVipsHttpsLoaderTest(WikimediaTestCase):
         cfg.VIPS_ENGINE_MIN_PIXELS = 0
         cfg.LOADER = 'wikimedia_thumbor.loader.proxy'
         cfg.HTTP_LOADER_MAX_BODY_SIZE = 1024*1024*1024  # 1GB
+        cfg.HTTP_LOADER_TEMP_FILE_TIMEOUT = 120
         cfg.PROXY_LOADER_LOADERS = [
             'wikimedia_thumbor.loader.video',
             'wikimedia_thumbor.loader.https'

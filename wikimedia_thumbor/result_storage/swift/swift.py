@@ -42,7 +42,7 @@ class Storage(BaseStorage):
             self.context.config.SWIFT_HOST +
             self.context.wikimedia_thumbnail_container +
             '/' +
-            self.context.wikimedia_path
+            self.context.wikimedia_thumbnail_save_path
         )
 
     # Coverage strangely reports lines lacking coverage in that function that
@@ -66,7 +66,7 @@ class Storage(BaseStorage):
 
             self.swift.put_object(
                 self.context.wikimedia_thumbnail_container,
-                self.context.wikimedia_path,
+                self.context.wikimedia_thumbnail_save_path,
                 bytes,
                 headers=headers
             )
@@ -83,7 +83,7 @@ class Storage(BaseStorage):
     def get(self, callback):
         logger.debug('[Swift] get: %r %r' % (
                 self.context.wikimedia_thumbnail_container,
-                self.context.wikimedia_path
+                self.context.wikimedia_thumbnail_save_path
             )
         )
 
@@ -95,7 +95,7 @@ class Storage(BaseStorage):
             logging.disable(logging.ERROR)
             headers, data = self.swift.get_object(
                 self.context.wikimedia_thumbnail_container,
-                self.context.wikimedia_path
+                self.context.wikimedia_thumbnail_save_path
             )
             logging.disable(logging.NOTSET)
 
