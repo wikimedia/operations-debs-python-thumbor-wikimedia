@@ -27,7 +27,7 @@ class ContextFilter(logging.Filter):
         if type(self).port == '????':
             matches = re.match(
                 '.*thumbor running at \d+.\d+.\d+.\d+:([\d]+).*',
-                record.msg
+                str(record.msg)
             )
 
             if matches:

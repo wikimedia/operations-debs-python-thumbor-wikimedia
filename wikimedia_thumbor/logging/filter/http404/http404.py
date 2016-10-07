@@ -11,7 +11,7 @@ class Http404Filter(logging.Filter):
 
     def filter(self, record):
         import re
-        matches = re.match('.*HTTP 404.*', record.msg)
+        matches = re.match('.*HTTP 404.*', str(record.msg))
 
         if self.flag == 'exclude':
             return not matches
