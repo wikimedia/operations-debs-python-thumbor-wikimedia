@@ -14,6 +14,7 @@
 # otherwise the first frame requested will be stored as the
 # original for subsequent requests
 
+import errno
 import os
 from functools import partial
 from tempfile import NamedTemporaryFile
@@ -30,11 +31,11 @@ from wikimedia_thumbor.shell_runner import ShellRunner
 
 
 def should_run(url):  # pragma: no cover
-    unquoted_url = unquote(url)
+    unquoted_url = unquote(url).lower()
 
     if (unquoted_url.endswith('.ogv') or
-            unquoted_url.endswith('ogg') or
-            unquoted_url.endswith('webm')):
+            unquoted_url.endswith('.ogg') or
+            unquoted_url.endswith('.webm')):
         return True
 
     return False
@@ -146,6 +147,7 @@ def seek_and_screenshot(callback, context, unquoted_url, seek):
         )
     )
 
+
 def _process_done(
         callback,
         process,
@@ -154,7 +156,7 @@ def _process_done(
         seek,
         output_file,
         status
-    ):
+        ):
     # If rendering the desired frame fails, attempt to render the
     # first frame instead
     if status != 0 and seek > 0:

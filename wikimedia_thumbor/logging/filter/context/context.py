@@ -30,9 +30,9 @@ class ContextFilter(logging.Filter):
                 record.msg
             )
 
-        if matches:
-            # It's a match, save the port and use it from this point on
-            type(self).port = matches.group(1)
+            if matches:
+                # It's a match, save the port and use it from this point on
+                type(self).port = matches.group(1)
 
         record.port = type(self).port
 

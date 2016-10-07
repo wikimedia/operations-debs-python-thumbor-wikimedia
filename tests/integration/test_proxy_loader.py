@@ -27,3 +27,12 @@ class WikimediaProxyLoaderTest(WikimediaTestCase):
             0.99,
             1.0,
         )
+
+    def test_proxied_uppercase_ogg(self):
+        self.run_and_check_ssim_and_size(
+            'unsafe/300x/https://upload.wikimedia.org/wikipedia/commons/f/f2/'
+            + 'Shakinghands_high.OGG',
+            '300px--Shakinghands_high.OGG.jpg',
+            0.96,
+            1.1
+        )
