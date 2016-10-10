@@ -25,10 +25,13 @@ class ContextFilter(logging.Filter):
         import re
         # Look for the port if we haven't found it yet
         if type(self).port == '????':
-            matches = re.match(
-                '.*thumbor running at \d+.\d+.\d+.\d+:([\d]+).*',
-                str(record.msg)
-            )
+            try:
+                matches = re.match(
+                    '.*thumbor running at \d+.\d+.\d+.\d+:([\d]+).*',
+                    unicode(record.msg)
+                )
+            except:
+                matches = None
 
             if matches:
                 # It's a match, save the port and use it from this point on
