@@ -188,3 +188,11 @@ class WikimediaTest(WikimediaTestCase):
             0.99,
             1.1
         )
+
+    def test_gif(self):
+        self.run_and_check_ssim_and_size(
+            'unsafe/300x/Pacific-Electric-Red-Cars-Awaiting-Destruction.gif',
+            '300px-Pacific-Electric-Red-Cars-Awaiting-Destruction.gif',
+            0.98,
+            1.1
+        )

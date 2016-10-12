@@ -36,3 +36,12 @@ class WikimediaProxyLoaderTest(WikimediaTestCase):
             0.96,
             1.1
         )
+
+    def test_proxied_gif(self):
+        self.run_and_check_ssim_and_size(
+            'unsafe/300x/https://upload.wikimedia.org/wikipedia/commons/f/fb/'
+            + 'Pacific-Electric-Red-Cars-Awaiting-Destruction.gif',
+            '300px-Pacific-Electric-Red-Cars-Awaiting-Destruction.gif',
+            0.98,
+            1.1
+        )

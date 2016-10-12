@@ -35,7 +35,6 @@ class WikimediaTestCase(AsyncHTTPTestCase):
             'originals'
         )
         cfg.ENGINE = 'wikimedia_thumbor.engine.proxy'
-        cfg.USE_GIFSICLE_ENGINE = True
         cfg.RESPECT_ORIENTATION = True
 
         cfg.FFMPEG_PATH = which('ffmpeg')
@@ -80,6 +79,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
             ('wikimedia_thumbor.engine.vips', ['tiff', 'png']),
             ('wikimedia_thumbor.engine.tiff', ['tiff']),
             ('wikimedia_thumbor.engine.ghostscript', ['pdf']),
+            ('wikimedia_thumbor.engine.gif', ['gif']),
             ('wikimedia_thumbor.engine.imagemagick', ['jpg', 'png']),
         ]
 

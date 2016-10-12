@@ -192,23 +192,28 @@ class Engine(BaseEngine):
             '-m',
         ]
 
-        stdout = Engine.exiftool.command(
+        self.icc_profile_saved = Engine.exiftool.command(
             pre=command,
             context=self.context,
             buffer=buffer
         )
 
-        profile_file = NamedTemporaryFile(delete=False)
-        profile_file.write(stdout)
-        profile_file.close()
-
-        self.icc_profile_path = profile_file.name
-
     def process_exif(self, buffer):
+        logger.debug('[IM] Processing EXIF')
+
         command = [
             '-m',
             '-all=',  # Strip all existing metadata
         ]
+
+        # Create the temp file when we need it
+        if hasattr(self, 'icc_profile_saved'):
+            logger.debug('[IM] Putting saved ICC profile into temp file')
+            profile_file = NamedTemporaryFile(delete=False)
+            profile_file.write(self.icc_profile_saved)
+            profile_file.close()
+            self.icc_profile_path = profile_file.name
+            del self.icc_profile_saved
 
         # Copy the ICC profile
         if hasattr(self, 'icc_profile_path'):
@@ -237,6 +242,7 @@ class Engine(BaseEngine):
         if (hasattr(self, 'icc_profile_path')
                 and self.icc_profile_path != tinyrgb_path):
             ShellRunner.rm_f(self.icc_profile_path)
+            del self.icc_profile_path
 
         return stdout
 

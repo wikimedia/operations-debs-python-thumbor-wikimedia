@@ -1,20 +1,26 @@
+python-thumbor-wikimedia (0.1.26-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Wed, 12 Oct 2016 15:40:00 +0000
+
 python-thumbor-wikimedia (0.1.25-1) jessie-wikimedia; urgency=low
 
   * New upstream release
 
- -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 10 OCt 2016 15:39:00 +0000
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 10 Oct 2016 15:39:00 +0000
 
 python-thumbor-wikimedia (0.1.24-1) jessie-wikimedia; urgency=low
 
   * New upstream release
 
- -- Gilles Dubuc <gilles@wikimedia.org>  Fri, 7 OCt 2016 17:27:00 +0000
+ -- Gilles Dubuc <gilles@wikimedia.org>  Fri, 7 Oct 2016 17:27:00 +0000
 
 python-thumbor-wikimedia (0.1.23-1) jessie-wikimedia; urgency=low
 
   * New upstream release
 
- -- Gilles Dubuc <gilles@wikimedia.org>  Fri, 7 OCt 2016 14:19:00 +0000
+ -- Gilles Dubuc <gilles@wikimedia.org>  Fri, 7 Oct 2016 14:19:00 +0000
 
 python-thumbor-wikimedia (0.1.22-1) jessie-wikimedia; urgency=low
 
@@ -23,7 +29,7 @@ python-thumbor-wikimedia (0.1.22-1) jessie-wikimedia; urgency=low
    - add python-urllib3 as build dependency
    - add python-manhole as dependency
 
- -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 3 OCt 2016 11:04:00 +0000
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 3 Oct 2016 11:04:00 +0000
 
 python-thumbor-wikimedia (0.1.21-1) jessie-wikimedia; urgency=low
 
