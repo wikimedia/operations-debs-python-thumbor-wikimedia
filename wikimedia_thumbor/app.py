@@ -9,7 +9,7 @@ import manhole
 import os.path
 import tempfile
 
-from thumbor.utils import logger
+from thumbor.utils import logger, which
 
 from tc_core.app import App as CommunityCoreApp
 
@@ -25,5 +25,9 @@ class App(CommunityCoreApp):
             )
 
             manhole.install(socket_path=socket_path)
+
+        # The gifsicle engine needs to work, regardless of
+        # USE_GIFSICLE_ENGINE being on or not
+        context.server.gifsicle_path = which('gifsicle')
 
         super(App, self).__init__(context)

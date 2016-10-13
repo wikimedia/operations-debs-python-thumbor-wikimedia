@@ -13,7 +13,7 @@ from thumbor.context import Context, ServerParameters
 from thumbor.importer import Importer
 from thumbor.utils import which
 
-from tc_core.app import App
+from wikimedia_thumbor.app import App
 
 
 class WikimediaTestCase(AsyncHTTPTestCase):
@@ -98,7 +98,6 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
     def get_app(self):
         server_params = ServerParameters(None, None, None, None, None, None)
-        server_params.gifsicle_path = which('gifsicle')
 
         cfg = self.get_config()
 
