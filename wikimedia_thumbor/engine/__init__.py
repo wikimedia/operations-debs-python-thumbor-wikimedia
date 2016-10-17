@@ -26,10 +26,6 @@ class CommandError(Exception):
 
 
 class BaseWikimediaEngine(IMEngine):
-    # Put temp files and fifos into their own temp folder to avoid
-    # exploits where converters might access other files in the same folder
-    temp_dir = mkdtemp()
-
     @classmethod
     def add_format(cls, mime, ext, fn):
         # Unfortunately there is no elegant way to extend Thumbor to support
@@ -80,6 +76,9 @@ class BaseWikimediaEngine(IMEngine):
             return
 
         logger.debug('[BWE] Create source file from buffer')
+        # Put temp files into their own temp folder to avoid
+        # exploits where converters might access other files in the same folder
+        self.temp_dir = mkdtemp()
         self.source = os.path.join(self.temp_dir, 'source_file')
 
         with open(self.source, 'w') as source:
@@ -88,9 +87,8 @@ class BaseWikimediaEngine(IMEngine):
     def cleanup_source(self):
         if hasattr(self, 'source'):
             ShellRunner.rm_f(self.source)
-
-    def cleanup(self):  # pragma: no cover
-        shutil.rmtree(self.temp_dir, True)
+        if hasattr(self, 'temp_dir'):
+            shutil.rmtree(self.temp_dir, True)
 
     def command(self, command, env=None, clean_on_error=True):
         returncode, stderr, stdout = ShellRunner.command(

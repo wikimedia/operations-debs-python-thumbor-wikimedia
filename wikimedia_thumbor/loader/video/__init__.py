@@ -15,6 +15,7 @@
 # original for subsequent requests
 
 import errno
+import re
 import os
 from functools import partial
 from tempfile import NamedTemporaryFile
@@ -69,7 +70,7 @@ def load_sync(context, url, callback):
 
     logger.debug('[Video] load_sync: %r' % command)
 
-    process = Subprocess(command, stdout=Subprocess.STREAM)
+    process = Subprocess(command, stdout=Subprocess.STREAM, stderr=Subprocess.STREAM)
     process.set_exit_callback(
         partial(
             _parse_time_status,
@@ -81,10 +82,30 @@ def load_sync(context, url, callback):
     )
 
 
+def _http_code_from_stderr(process, result):
+    result.successful = False
+    stderr = process.stderr.read_from_fd()
+
+    logger.warning('[Video] Fprobe/ffmpeg errored: %r' % stderr)
+    code = re.match('.*Server returned (\d\d\d).*', stderr)
+
+    if code:
+        code = int(code.group(1))
+
+    if code == 404:
+        result.error = LoaderResult.ERROR_NOT_FOUND
+    elif code == 599:
+        result.error = LoaderResult.ERROR_TIMEOUT
+    elif code == 500:
+        result.error = LoaderResult.ERROR_UPSTREAM
+
+
 def _parse_time_status(context, url, callback, process, status):
-    if status != 0:  # pragma: no cover
+    if status != 0:
         result = LoaderResult()
-        result.successful = False
+
+        _http_code_from_stderr(process, result)
+
         callback(result)
     else:
         process.stdout.read_until_close(
@@ -134,7 +155,7 @@ def seek_and_screenshot(callback, context, unquoted_url, seek):
 
     logger.debug('[Video] _parse_time: %r' % command)
 
-    process = Subprocess(command, stdout=Subprocess.STREAM)
+    process = Subprocess(command, stdout=Subprocess.STREAM, stderr=Subprocess.STREAM)
     process.set_exit_callback(
         partial(
             _process_done,
@@ -166,7 +187,7 @@ def _process_done(
     result = LoaderResult()
 
     if status != 0:  # pragma: no cover
-        result.successful = False
+        _http_code_from_stderr(process, result)
     else:
         result.successful = True
         result.buffer = output_file.read()

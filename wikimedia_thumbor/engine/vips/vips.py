@@ -13,6 +13,8 @@
 
 import math
 import os
+import shutil
+from tempfile import mkdtemp
 
 from thumbor.utils import logger
 
@@ -124,8 +126,9 @@ class Engine(BaseWikimediaEngine):
             raise e
 
     def shrink_for_page(self, source, shrink_factor):
+        temp_dir = mkdtemp()
         destination = os.path.join(
-            self.temp_dir,
+            temp_dir,
             'vips_result%s' % self.target_format()
         )
 
@@ -142,6 +145,7 @@ class Engine(BaseWikimediaEngine):
             self.command(command, clean_on_error=False)
         except CommandError as e:  # pragma: no cover
             ShellRunner.rm_f(destination)
+            shutil.rmtree(temp_dir, True)
             raise e
 
         with open(destination, 'rb') as f:
@@ -149,5 +153,6 @@ class Engine(BaseWikimediaEngine):
 
         self.cleanup_source()
         ShellRunner.rm_f(destination)
+        shutil.rmtree(temp_dir, True)
 
         return result

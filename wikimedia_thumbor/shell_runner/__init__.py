@@ -13,6 +13,7 @@
 
 import datetime
 import errno
+from functools import partial
 import os
 import subprocess
 
@@ -24,18 +25,7 @@ class ShellRunner:
     def wrap_command(cls, command, context):
         wrapped_command = command
 
-        if (hasattr(context.config, 'SUBPROCESS_USE_CGEXEC')
-            and context.config.SUBPROCESS_USE_CGEXEC):  # pragma: no cover
-            cgroup = context.config.SUBPROCESS_CGROUP
-            cgexec_path = context.config.SUBPROCESS_CGEXEC_PATH
-            wrapped_command = [
-                cgexec_path,
-                '-g',
-                cgroup
-            ] + wrapped_command
-
-        if (hasattr(context.config, 'SUBPROCESS_USE_TIMEOUT')
-            and context.config.SUBPROCESS_USE_TIMEOUT):
+        if getattr(context.config, 'SUBPROCESS_USE_TIMEOUT', False):
             timeout = context.config.SUBPROCESS_TIMEOUT
             timeout_path = context.config.SUBPROCESS_TIMEOUT_PATH
             wrapped_command = [
@@ -45,6 +35,18 @@ class ShellRunner:
             ] + wrapped_command
 
         return wrapped_command
+
+    @classmethod
+    def preexec(cls, context):  # pragma: no cover
+        if not getattr(context.config, 'SUBPROCESS_CGROUP_TASKS_PATH', False):
+            return
+
+        pid = os.getpid()
+
+        logger.debug('[ShellRunner] Adding pid %r to cgroup' % pid)
+
+        with open(context.config.SUBPROCESS_CGROUP_TASKS_PATH, 'a+') as tasks:
+            tasks.write('%s\n' % pid)
 
     @classmethod
     def popen(cls, command, context, stdin=None, env=None):
@@ -65,7 +67,8 @@ class ShellRunner:
                 wrapped_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=combined_env
+                env=combined_env,
+                preexec_fn=partial(cls.preexec, context)
             )
         else:  # pragma: no cover
             proc = subprocess.Popen(
@@ -73,7 +76,8 @@ class ShellRunner:
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=combined_env
+                env=combined_env,
+                preexec_fn=partial(cls.preexec, context)
             )
             proc.stdin.write(stdin)
 

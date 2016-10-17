@@ -16,3 +16,15 @@ class WikimediaHugeVideoTest(WikimediaTestCase):
             0.98,
             1.0
         )
+
+    def test_404(self):
+        url = 'unsafe/320x/filters:page(82)/https://upload.wikimedia.org/'\
+            'wikipedia/commons/a/ab/Thisfiledoesntexist.webm'
+
+        try:
+            result = self.retrieve("/%s" % url)
+        except Exception as e:
+            assert False, 'Exception occured: %r' % e
+
+        assert result is not None, 'No result'
+        assert result.code == 404, 'Response code: %s' % result.code
