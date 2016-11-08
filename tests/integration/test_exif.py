@@ -1,6 +1,4 @@
 import os
-import subprocess
-import tempfile
 import PIL.ExifTags
 
 from . import WikimediaTestCase

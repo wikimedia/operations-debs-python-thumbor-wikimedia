@@ -70,7 +70,12 @@ def load_sync(context, url, callback):
 
     logger.debug('[Video] load_sync: %r' % command)
 
-    process = Subprocess(command, stdout=Subprocess.STREAM, stderr=Subprocess.STREAM)
+    process = Subprocess(
+        command,
+        stdout=Subprocess.STREAM,
+        stderr=Subprocess.STREAM
+    )
+
     process.set_exit_callback(
         partial(
             _parse_time_status,
@@ -155,7 +160,12 @@ def seek_and_screenshot(callback, context, unquoted_url, seek):
 
     logger.debug('[Video] _parse_time: %r' % command)
 
-    process = Subprocess(command, stdout=Subprocess.STREAM, stderr=Subprocess.STREAM)
+    process = Subprocess(
+        command,
+        stdout=Subprocess.STREAM,
+        stderr=Subprocess.STREAM
+    )
+
     process.set_exit_callback(
         partial(
             _process_done,
