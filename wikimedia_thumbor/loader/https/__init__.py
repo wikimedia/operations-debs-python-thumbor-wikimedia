@@ -12,12 +12,13 @@
 # Https loader. Unlike the stock Thumbor one, uses a streaming callback
 # and can define a higher body size limit than 100MB
 
+import re
 from functools import partial
 from tempfile import NamedTemporaryFile
 import tornado.simple_httpclient
 
 
-from thumbor.loaders import http_loader, https_loader
+from thumbor.loaders import http_loader
 from thumbor.utils import logger
 
 from wikimedia_thumbor.shell_runner import ShellRunner
@@ -62,6 +63,18 @@ def stream_contents(response, f):
     f.write(response)
 
 
+def _normalize_url(url):
+    rewritten_parts = []
+    parts = url.split('/')
+
+    for part in parts[:-1]:
+        rewritten_parts.append(re.sub(r'%3A', r':', part))
+
+    rewritten_parts.append(parts[-1])
+
+    return '/'.join(rewritten_parts)
+
+
 def load_sync(context, url, callback):
     logger.debug('[HTTPS] load_sync: %s' % url)
     client = tornado.simple_httpclient.SimpleAsyncHTTPClient(
@@ -78,7 +91,10 @@ def load_sync(context, url, callback):
 
     f = NamedTemporaryFile(delete=False)
 
-    url = https_loader._normalize_url(url)
+    url = _normalize_url(url)
+
+    logger.debug('[HTTPS] Loading normalized URL: %s' % url)
+
     req = tornado.httpclient.HTTPRequest(
         url=url,
         connect_timeout=context.config.HTTP_LOADER_CONNECT_TIMEOUT,

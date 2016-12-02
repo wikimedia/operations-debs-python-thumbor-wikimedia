@@ -18,7 +18,7 @@ class WikimediaVideoTest(WikimediaTestCase):
         )
 
         self.run_and_check_ssim_and_size(
-            'unsafe/640x/' + path,
+            'thumbor/unsafe/640x/' + path,
             '640px--2010-07-14-Blitze-Zeitlupe-1-08.ogg.jpg',
             0.99,
             1.0
@@ -32,7 +32,7 @@ class WikimediaVideoTest(WikimediaTestCase):
         )
 
         self.run_and_check_ssim_and_size(
-            'unsafe/320x/' + path,
+            'thumbor/unsafe/320x/' + path,
             '320px--Aequipotentialflaechen.webm.jpg',
             0.99,
             1.0
@@ -46,7 +46,7 @@ class WikimediaVideoTest(WikimediaTestCase):
         )
 
         self.run_and_check_ssim_and_size(
-            'unsafe/320x/filters:page(1)/' + path,
+            'thumbor/unsafe/320x/filters:page(1)/' + path,
             '320px-seek=1-Aequipotentialflaechen.webm.jpg',
             0.99,
             1.0

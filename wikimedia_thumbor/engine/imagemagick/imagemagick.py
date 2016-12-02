@@ -21,9 +21,9 @@ from thumbor.engines import BaseEngine
 from wikimedia_thumbor.shell_runner import ShellRunner
 from wikimedia_thumbor.exiftool_runner import ExiftoolRunner
 
-image.OPTIONS = frozenset(
-    ['fill', 'jpeg:sampling-factor', 'pdf:use-cropbox', 'jpeg:size']
-)
+# wand artificially limits the options you can set on the image object
+
+image.OPTIONS |= {'jpeg:sampling-factor', 'jpeg:size', 'tiff:exif-properties'}
 
 # wand doesn't support reading pixel blobs out of the box,
 # only file blobs, so we have to monkey-patch that in
@@ -106,10 +106,10 @@ class Engine(BaseEngine):
                 buffer = content_file.read()
             ShellRunner.rm_f(fname)
 
-        self.im_original_buffer = buffer
         self.exif = {}
 
         im = image.Image()
+        im.options['tiff:exif-properties'] = 'no'
 
         # Read EXIF data from buffer first. This will get us the
         # size if we need it for the jpeg:size option, as well as the
@@ -249,8 +249,7 @@ class Engine(BaseEngine):
     def read(self, extension=None, quality=None):
         logger.debug('[IM] read: %r %r' % (extension, quality))
 
-        if quality is None:
-            return self.im_original_buffer
+        extension = extension.lstrip('.')
 
         self.image.compression_quality = quality
 
@@ -262,8 +261,6 @@ class Engine(BaseEngine):
             self.image.options['jpeg:sampling-factor'] = cs
 
         logger.debug('[IM] Generating image with quality %r' % quality)
-
-        extension = extension.lstrip('.')
 
         if extension == 'jpg' and self.context.config.PROGRESSIVE_JPEG:
             self.image.set_interlace_scheme('PlaneInterlace')

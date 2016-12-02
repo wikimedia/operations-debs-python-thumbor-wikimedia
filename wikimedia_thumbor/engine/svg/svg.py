@@ -26,11 +26,9 @@ class Engine(BaseWikimediaEngine):
         # Quite wide, but it's better to let rsvg give a file a shot
         # rather than bail without trying
         return (buffer.startswith('<?xml') and
-                'http://www.w3.org/2000/svg' in buffer[:1024])
+                'http://www.w3.org/2000/svg' in buffer[:4096])
 
     def create_image(self, buffer):
-        self.original_buffer = buffer
-
         self.prepare_source(buffer)
 
         command = [

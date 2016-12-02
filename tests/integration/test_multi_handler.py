@@ -35,8 +35,7 @@ class WikimediaMultiHandlerTestCase(WikimediaTestCase):
             self.stop,
             method='POST',
             headers=headers,
-            body='paths[]=unsafe%2F400x%2F1Mcolors.png&'
-            + 'paths[]=unsafe%2F300x%2F1Mcolors.png'
+            body='paths[]=unsafe%2F400x%2F1Mcolors.png&paths[]=unsafe%2F300x%2F1Mcolors.png'
         )
         response = self.wait()
         assert response.code == 200, \
@@ -52,9 +51,7 @@ class WikimediaMultiHandlerTestCase(WikimediaTestCase):
             self.stop,
             method='POST',
             headers=headers,
-            body='paths[]=unsafe%2F400x%2F1Mcolors.png&'
-            + 'paths[]=unsafe%2F300x%2F1Mcolors.png&'
-            + 'paths[]=unsafe%2F200x%2F1Mcolors.png'
+            body='paths[]=unsafe%2F400x%2F1Mcolors.png&paths[]=unsafe%2F300x%2F1Mcolors.png&paths[]=unsafe%2F200x%2F1Mcolors.png'
         )
         response = self.wait()
         assert response.code == 400, \

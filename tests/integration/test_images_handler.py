@@ -1,16 +1,32 @@
 import json
 from thumbor.config import Config
+from thumbor.handlers import BaseHandler
 
 
 from . import WikimediaTestCase
 
 
 class WikimediaImagesHandlerTestCase(WikimediaTestCase):
+    def setUp(self):
+        super(WikimediaImagesHandlerTestCase, self).setUp()
+        # Undo monkey-patching to be able to inspect headers
+        # as if the test requests were successful
+        def _error(self, status, msg=None):
+            return BaseHandler._old_error(self, status, msg)
+
+        BaseHandler._error = _error
+
+    def tearDown(self):
+        BaseHandler._error =  BaseHandler._error
+        super(WikimediaImagesHandlerTestCase, self).tearDown()
+
+
     def get_config(self):
         cfg = Config(SECURITY_KEY='ACME-SEC')
 
         cfg.COMMUNITY_EXTENSIONS = [
-            'wikimedia_thumbor.handler.images'
+            'wikimedia_thumbor.handler.images',
+            'wikimedia_thumbor.handler.core'
         ]
 
         cfg.SWIFT_HOST = 'http://swifthost'
@@ -20,6 +36,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         cfg.SWIFT_KEY = 'baz'
         cfg.SWIFT_SHARDED_CONTAINERS = [
             'wikipedia-en-local-public',
+            'wikipedia-en-local-temp',
             'wikipedia-en-local-thumb'
         ]
         cfg.SWIFT_PATH_PREFIX = 'thumbor/'
@@ -35,157 +52,311 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         self,
         url,
         expected_xkey,
-        expected_container,
-        expected_path,
+        expected_original_container,
+        expected_original_path,
+        expected_thumbnail_container,
+        expected_thumbnail_path,
         expected_width,
         expected_image,
-        expected_filters
+        expected_filters,
+        expected_content_disposition
     ):
         """Request URL and check header correctness.
 
         Arguments:
         url -- thumbnail URL
-        expected_xkey -- expected xkey header value
-        expected_container -- expected container header value
-        expected_path -- expected path header value
-        expected_width -- expected width header value
-        expected_image -- expected image header value
-        expected_filters -- expected filters header value
+        expected_xkey -- expected xkey
+        expected_original_container -- expected original swift container
+        expected_original_path -- expected original swift path
+        expected_thumbnail_container -- expected thumbnail swift container
+        expected_thumbnaill_path -- expected thumbnail swift path
+        expected_width -- expected width
+        expected_image -- expected image
+        expected_filters -- expected thumbor filters
+        expected_content_disposition -- expected content disposition
         """
         response = self.retrieve(url)
 
-        xkey = response.headers.get_list('xkey')[0]
-        wikimedia_thumbnail_save_path = response.headers.get_list(
-            'Wikimedia-Path'
-        )[0]
-        wikimedia_thumbnail_container = response.headers.get_list(
-            'Wikimedia-Thumbnail-Container'
-        )[0]
-        thumbor_parameters = json.loads(
-            response.headers.get_list('Thumbor-Parameters')[0]
-        )
+        try:
+            xkey = response.headers.get_list('xkey')[0]
+        except IndexError:
+            xkey = None
+
+        try:
+            wikimedia_original_container = response.headers.get_list(
+                'Wikimedia-Original-Container'
+            )[0]
+        except IndexError:
+            wikimedia_original_container = None
+
+        try:
+            wikimedia_original_path = response.headers.get_list(
+                'Wikimedia-Original-Path'
+            )[0]
+        except IndexError:
+            wikimedia_original_path = None
+
+        try:
+            wikimedia_thumbnail_container = response.headers.get_list(
+                'Wikimedia-Thumbnail-Container'
+            )[0]
+        except IndexError:
+            wikimedia_thumbnail_container = None
+
+        try:
+            wikimedia_thumbnail_path = response.headers.get_list(
+                'Wikimedia-Thumbnail-Path'
+            )[0]
+        except IndexError:
+            wikimedia_thumbnail_path = None
+
+        try:
+            thumbor_parameters = json.loads(
+                response.headers.get_list('Thumbor-Parameters')[0]
+            )
+        except IndexError:
+            thumbor_parameters = {
+                'width': None,
+                'image': None,
+                'filters': None
+            }
+
+        try:
+            wikimedia_content_diposition = response.headers.get_list(
+                'Content-Disposition'
+            )[0]
+        except IndexError:
+            wikimedia_content_diposition = None
 
         assert xkey == expected_xkey, 'Incorrect Xkey: %s' % xkey
-        assert wikimedia_thumbnail_save_path == expected_path, \
-            'Wikimedia-Path: %s' % wikimedia_thumbnail_save_path
-        assert wikimedia_thumbnail_container == expected_container, \
+
+        assert wikimedia_original_container == expected_original_container, \
+            'Wikimedia-Original-Container: %s' % wikimedia_original_container
+
+        assert wikimedia_original_path == expected_original_path, \
+            'Wikimedia-Original-Path: %s' % wikimedia_original_path
+
+        assert wikimedia_thumbnail_container == expected_thumbnail_container, \
             'Wikimedia-Thumbnail-Container: %s' % wikimedia_thumbnail_container
+
+        assert wikimedia_thumbnail_path == expected_thumbnail_path, \
+            'Wikimedia-Thumbnail-Path: %s' % wikimedia_thumbnail_path
+
         assert thumbor_parameters['width'] == expected_width, \
             'Thumbor-Parameters width: %s' % thumbor_parameters['width']
+
         assert thumbor_parameters['image'] == expected_image, \
             'Thumbor-Parameters image: %s' % thumbor_parameters['image']
+
         assert thumbor_parameters['filters'] == expected_filters, \
             'Thumbor-Parameters filters: %s' % thumbor_parameters['filters']
+
+        assert wikimedia_content_diposition == expected_content_disposition, \
+            'Content-Disposition: %s' % wikimedia_content_diposition
 
     def test_png(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
             'File:1Mcolors.png',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.png',
             'wikipedia-en-local-thumb.d3',
             'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'd/d3/1Mcolors.png',
-            'format(png)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.png',
+            'format(png)',
+            'inline;filename*=UTF-8\'\'1Mcolors.png'
         )
 
     def test_qlow(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.jpg/qlow-400px-1Mcolors.jpg',
             'File:1Mcolors.jpg',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.jpg',
             'wikipedia-en-local-thumb.d3',
             'thumbor/d/d3/1Mcolors.jpg/qlow-400px-1Mcolors.jpg',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'd/d3/1Mcolors.jpg',
-            'quality(10):conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.jpg',
+            'quality(10):conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)',
+            'inline;filename*=UTF-8\'\'1Mcolors.jpg'
         )
 
     def test_page(self):
         self.run_and_check_headers(
-            '/wikipedia/en/thumb/d/d3/1Mcolors.pdf/'
-            + 'page3-400px-1Mcolors.pdf.jpg',
+            '/wikipedia/en/thumb/d/d3/1Mcolors.pdf/page3-400px-1Mcolors.pdf.jpg',
             'File:1Mcolors.pdf',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.pdf',
             'wikipedia-en-local-thumb.d3',
             'thumbor/d/d3/1Mcolors.pdf/page3-400px-1Mcolors.pdf.jpg',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'd/d3/1Mcolors.pdf',
-            'format(jpg):page(3)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.pdf',
+            'format(jpg):page(3)',
+            'inline;filename*=UTF-8\'\'1Mcolors.pdf.jpg'
         )
 
     def test_lang(self):
         self.run_and_check_headers(
-            '/wikipedia/en/thumb/d/d3/1Mcolors.svg/'
-            + 'langfr-400px-1Mcolors.svg.png',
+            '/wikipedia/en/thumb/d/d3/1Mcolors.svg/langfr-400px-1Mcolors.svg.png',
             'File:1Mcolors.svg',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.svg',
             'wikipedia-en-local-thumb.d3',
             'thumbor/d/d3/1Mcolors.svg/langfr-400px-1Mcolors.svg.png',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'd/d3/1Mcolors.svg',
-            'format(png):lang(fr)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.svg',
+            'format(png):lang(fr)',
+            'inline;filename*=UTF-8\'\'1Mcolors.svg.png'
         )
 
     def test_seek(self):
         self.run_and_check_headers(
-            '/wikipedia/en/thumb/d/d3/1Mcolors.webm/'
-            + '400px-seek=10-1Mcolors.webm.jpg',
+            '/wikipedia/en/thumb/d/d3/1Mcolors.webm/400px-seek=10-1Mcolors.webm.jpg',
             'File:1Mcolors.webm',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.webm',
             'wikipedia-en-local-thumb.d3',
             'thumbor/d/d3/1Mcolors.webm/400px-seek=10-1Mcolors.webm.jpg',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'd/d3/1Mcolors.webm',
-            'format(jpg):page(10)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.webm',
+            'format(jpg):page(10)',
+            'inline;filename*=UTF-8\'\'1Mcolors.webm.jpg'
         )
 
     def test_jpe(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.jpe/400px-1Mcolors.jpe',
             'File:1Mcolors.jpe',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.jpe',
             'wikipedia-en-local-thumb.d3',
             'thumbor/d/d3/1Mcolors.jpe/400px-1Mcolors.jpg',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'd/d3/1Mcolors.jpe',
-            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.jpe',
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)',
+            'inline;filename*=UTF-8\'\'1Mcolors.jpe.jpg'
         )
 
     def test_meta(self):
         self.run_and_check_headers(
             '/wikipedia/meta/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
             'File:1Mcolors.png',
+            'wikipedia-meta-local-public',
+            'd/d3/1Mcolors.png',
             'wikipedia-meta-local-thumb',
             'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-meta-local-public/'
-            + 'd/d3/1Mcolors.png',
-            'format(png)'
+            'http://swifthost/swift/v1/api/path/wikipedia-meta-local-public/d/d3/1Mcolors.png',
+            'format(png)',
+            'inline;filename*=UTF-8\'\'1Mcolors.png'
         )
 
     def test_mediawiki(self):
         self.run_and_check_headers(
             '/wikipedia/mediawiki/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
             'File:1Mcolors.png',
+            'wikipedia-mediawiki-local-public',
+            'd/d3/1Mcolors.png',
             'wikipedia-mediawiki-local-thumb',
             'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png',
             '400',
-            'http://swifthost/swift/v1/api/path/'
-            + 'wikipedia-mediawiki-local-public/d/d3/1Mcolors.png',
-            'format(png)'
+            'http://swifthost/swift/v1/api/path/wikipedia-mediawiki-local-public/d/d3/1Mcolors.png',
+            'format(png)',
+            'inline;filename*=UTF-8\'\'1Mcolors.png'
         )
 
     def test_archive(self):
         self.run_and_check_headers(
-            '/wikipedia/en/thumb/archive/d/d3/20160729183014!1Mcolors.jpg/'
-            + '400px-1Mcolors.jpg',
+            '/wikipedia/en/thumb/archive/d/d3/20160729183014!1Mcolors.jpg/400px-1Mcolors.jpg',
             'File:20160729183014!1Mcolors.jpg',
+            'wikipedia-en-local-public.d3',
+            'archive/d/d3/20160729183014!1Mcolors.jpg',
             'wikipedia-en-local-thumb.d3',
-            'thumbor/archive/d/d3/20160729183014!1Mcolors.jpg/'
-            + '400px-1Mcolors.jpg',
+            'thumbor/archive/d/d3/20160729183014!1Mcolors.jpg/400px-1Mcolors.jpg',
             '400',
-            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/'
-            + 'archive/d/d3/20160729183014!1Mcolors.jpg',
-            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)'
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/archive/d/d3/20160729183014!1Mcolors.jpg',
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)',
+            'inline;filename*=UTF-8\'\'20160729183014!1Mcolors.jpg'
+        )
+
+    def test_lossless_tiff(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            'File:1Mcolors.tif',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.tif',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1Mcolors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.tif',
+            'format(png):page(1)',
+            'inline;filename*=UTF-8\'\'1Mcolors.tif.png'
+        )
+
+    def test_broken_request(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1M%0Acolors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            None,
+            'wikipedia-en-local-public.d3',
+            None,
+            'wikipedia-en-local-thumb.d3',
+            None,
+            '400',
+            'http://swifthost/swift/v1/api/path/'
+            + 'wikipedia-en-local-public.d3/d/d3/1M\ncolors.tif',
+            'format(png):page(1)',
+            None
+        )
+
+    def test_question_mark_original(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1M%3Fcolors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            'File:1M?colors.tif',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1M?colors.tif',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1M?colors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1M?colors.tif',
+            'format(png):page(1)',
+            'inline;filename*=UTF-8\'\'1M?colors.tif.png'
+        )
+
+    def test_temp(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/temp/8/88/20161115090130%21fYJSjm.pdf/page1-71px-20161115090130%21fYJSjm.pdf.jpg',
+            'File:20161115090130!fYJSjm.pdf',
+            'wikipedia-en-local-temp.57',
+            '5/57/20161115090130!fYJSjm.pdf',
+            'wikipedia-en-local-temp.88',
+            'thumbor/thumb/8/88/20161115090130!fYJSjm.pdf/page1-71px-20161115090130!fYJSjm.pdf.jpg',
+            '71',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-temp.57/5/57/20161115090130!fYJSjm.pdf',
+            'format(jpg):page(1)',
+            'inline;filename*=UTF-8\'\'20161115090130!fYJSjm.pdf.jpg'
+        )
+
+    def run_and_check_error(
+        self,
+        url,
+        expected_status
+    ):
+        response = self.retrieve(url)
+        assert response.code == expected_status
+
+    def test_missing_mandatory_parameters(self):
+        self.run_and_check_error(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.tif',
+            404
+        )
+
+    def test_too_many_parts(self):
+        self.run_and_check_error(
+            '/wikipedia/en/thumb/8/80/1Mcolors.tif/1Mcolors.tif.jpg/90x55x2-15px-1Mcolors.tif.jpg',
+            404
+        )
+        self.run_and_check_error(
+            '/wikipedia/en/thumb/7/77/1Mcolors.png/1Mcolors.png/199px-1Mcolors.png',
+            404
         )

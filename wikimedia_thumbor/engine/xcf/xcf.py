@@ -23,7 +23,6 @@ BaseWikimediaEngine.add_format(
 
 class Engine(BaseWikimediaEngine):
     def create_image(self, buffer):
-        self.original_buffer = buffer
         self.prepare_source(buffer)
 
         # xcf2png doesn't exist in library form, only as an executable

@@ -10,15 +10,14 @@ class WikimediaHugeVideoTest(WikimediaTestCase):
 
     def test_webm_with_fallback_seek(self):
         self.run_and_check_ssim_and_size(
-            'unsafe/320x/filters:page(82)/https://upload.wikimedia.org/'
-            + 'wikipedia/commons/a/ab/Borsch_01.webm',
+            'thumbor/unsafe/320x/filters:page(82)/https://upload.wikimedia.org/wikipedia/commons/a/ab/Borsch_01.webm',
             '320px-seek=0-Borsch_01.webm.jpg',
             0.98,
             1.0
         )
 
     def test_404(self):
-        url = 'unsafe/320x/filters:page(82)/https://upload.wikimedia.org/'\
+        url = 'thumbor/unsafe/320x/filters:page(82)/https://upload.wikimedia.org/'\
             'wikipedia/commons/a/ab/Thisfiledoesntexist.webm'
 
         try:

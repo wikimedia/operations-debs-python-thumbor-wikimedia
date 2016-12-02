@@ -84,8 +84,6 @@ class Engine(BaseWikimediaEngine):
         if not hasattr(self.context.request, 'extension'):
             return super(Engine, self).create_image(buffer)
 
-        self.original_buffer = buffer
-
         shrink_factor = int(math.floor(
             float(self.context.vips['width'])
             /

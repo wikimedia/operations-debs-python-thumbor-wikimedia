@@ -45,18 +45,6 @@ class BaseWikimediaEngine(IMEngine):
         BaseEngine.get_mimetype = new_get_mimetype
 
     def read(self, extension=None, quality=None):
-        # read() is sometimes used to read back the original.
-        # This relies on the convention that any engine extending
-        # BaseWikimediaEngine should set original_buffer inside its
-        # create_image method
-        if (
-            hasattr(self, 'original_buffer') and
-            quality is None and
-            extension == self.extension
-        ):
-            logger.debug('[BWE] Reading the original')
-            return self.original_buffer
-
         # When requests don't come through the wikimedia url handler
         # and the format isn't specified, we default to JPG output
         if self.context.request.format is None:

@@ -11,6 +11,8 @@ import tempfile
 
 from thumbor.utils import logger, which
 
+from thumbor.handlers import ContextHandler
+from tc_core import Extensions
 from tc_core.app import App as CommunityCoreApp
 
 
@@ -31,3 +33,27 @@ class App(CommunityCoreApp):
         context.server.gifsicle_path = which('gifsicle')
 
         super(App, self).__init__(context)
+
+    # We override this to avoid the catch-all ImagingHandler from
+    # Thumbor which prevents us from 404ing properly on completely
+    # broken URLs.
+    def get_handlers(self):
+        '''Return a list of tornado web handlers.
+        '''
+
+        handlers = []
+
+        for extensions in Extensions.extensions:
+            for handler in extensions.handlers:
+
+                # Inject the context if the handler expects it.
+                if issubclass(handler[1], ContextHandler):
+                    if len(handler) < 3:
+                        handler = list(handler)
+                        handler.append(dict(context=self.context))
+                    else:
+                        handler[2]['context'] = self.context
+
+                handlers.append(handler)
+
+        return handlers

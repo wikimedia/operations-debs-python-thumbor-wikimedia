@@ -9,11 +9,39 @@
 
 from urllib import quote
 import json
+import md5
 import tornado.gen as gen
 
 from thumbor.context import RequestParameters
+from thumbor.handlers import BaseHandler
 from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
+
+
+BaseHandler._old_error = BaseHandler._error
+
+
+# We need to monkey-patch BaseHandler because otherwise we
+# wouldn't apply the Cache-Control headers to 400 errors that
+# don't make it to ImagesHandler since they don't match the
+# handlers' regexp.
+def _error(self, status, msg=None):
+    # Errors should explicitely not be cached
+    self.set_header(
+        'Cache-Control',
+        'no-cache'
+    )
+    self.clear_header('xkey')
+    self.clear_header('Content-Disposition')
+    self.clear_header('Wikimedia-Original-Container')
+    self.clear_header('Wikimedia-Thumbnail-Container')
+    self.clear_header('Wikimedia-Original-Path')
+    self.clear_header('Wikimedia-Thumbnail-Path')
+    self.clear_header('Thumbor-Parameters')
+    BaseHandler._old_error(self, status, msg)
+
+
+BaseHandler._error = _error
 
 
 class TranslateError(Exception):
@@ -31,15 +59,16 @@ class ImagesHandler(ImagingHandler):
             r'(?:(?P<specialpath>temp|archive)/)?'
             r'(?P<shard1>[0-9a-zA-Z]+)/'
             r'(?P<shard2>[0-9a-zA-Z]+)/'
-            r'(?P<filename>.*)\.'
-            r'(?P<extension>.*)/'
+            r'(?P<filename>[^/]+)\.'
+            r'(?P<extension>[^/]+)/'
             r'(?:(?P<qlow>qlow-))?'
             r'(?:(?P<lossy>lossy-))?'
+            r'(?:(?P<lossless>lossless-))?'
             r'(?:page(?P<page>\d+)-)?'
             r'(?:lang(?P<lang>[a-zA-Z]+)-)?'
             r'(?P<width>\d+)px-'
             r'(?:seek=(?P<seek>\d+)-)?'
-            r'(?P<end>.*)'
+            r'(?P<end>[^/]+)'
             r'\.(?P<format>[a-zA-Z]+)'
         )
 
@@ -54,6 +83,12 @@ class ImagesHandler(ImagingHandler):
         )
 
         if kw['specialpath']:
+            # This is done for backwards compatibility. I assume that the reasoning
+            # was that since the  temp thumbnails are stored alongside the originals
+            # in the temp container, changing the prefix made things clearer when
+            # inspecting the contents of the container.
+            if kw['specialpath'] == 'temp':
+                kw['specialpath'] = 'thumb'
             path = '/'.join((kw['specialpath'], path))
 
         if kw['qlow'] == 'qlow-':
@@ -61,6 +96,9 @@ class ImagesHandler(ImagingHandler):
 
         if kw['lossy'] == 'lossy-':  # pragma: no cover
             path += kw['lossy']
+
+        if kw['lossless'] == 'lossless-':
+            path += kw['lossless']
 
         if kw['page']:
             path += 'page' + kw['page'] + '-'
@@ -82,17 +120,6 @@ class ImagesHandler(ImagingHandler):
     def translate(self, kw):
         logger.debug('[ImagesHandler] translate: %r' % kw)
 
-        filepath = '/'.join(
-            (
-                kw['shard1'],
-                kw['shard2'],
-                kw['filename'] + '.' + kw['extension']
-            )
-        )
-
-        if kw['specialpath']:
-            filepath = '/'.join((kw['specialpath'], filepath))
-
         translated = {'width': kw['width']}
 
         if int(kw['width']) < 1:
@@ -103,30 +130,65 @@ class ImagesHandler(ImagingHandler):
         if hasattr(self.context.config, 'SWIFT_SHARDED_CONTAINERS'):
             sharded_containers = self.context.config.SWIFT_SHARDED_CONTAINERS
 
-        project = kw['project']
-        language = kw['language']
-
-        # Handle sharding check before legacy projlang override
-        projlang = '-'.join((project, language))
+        projlang = '-'.join((kw['project'], kw['language']))
         original_container = projlang + '-local-public'
         thumbnail_container = projlang + '-local-thumb'
-        shard = '.' + kw['shard2']
+        original_shard1 = kw['shard1']
+        original_shard2 = kw['shard2']
+        thumbnail_shard2 = kw['shard2']
+
+        # Temp is different from any other case. Originals are thumbnails are
+        # stored alongside each other in the same container. The hash prefix
+        # is different for thumbnails and originals. Thumbnails stick to the
+        # standard hash prefix scheme. While the hash prefix used for originals
+        # is recalculated by excluding the date and exclamation point the filename
+        # contains.
+        # This twisted logic is reproduced here for backwards compatibility.
+        if kw['specialpath'] == 'temp':
+            original_container = projlang + '-local-temp'
+            thumbnail_container = projlang + '-local-temp'
+            filename = kw['filename']
+
+            if '!' in filename:
+                hashed_name = filename.split('!', 1)[1] + '.' + kw['extension']
+                hashed = md5.new(hashed_name).hexdigest()
+                original_shard1 = hashed[:1]
+                original_shard2 = hashed[:2]
 
         if original_container in sharded_containers:
-            original_container += shard
+            original_container += '.' + original_shard2
 
         if thumbnail_container in sharded_containers:
-            thumbnail_container += shard
+            thumbnail_container += '.' + thumbnail_shard2
 
-        swift_uri = (
+        original_filepath = '/'.join(
+            (
+                original_shard1,
+                original_shard2,
+                kw['filename'] + '.' + kw['extension']
+            )
+        )
+
+        # Temp originals are not prefixed by the specialpath.
+        # I assume that the logic was that within the context of the temp
+        # containers, everything is a temp file and there's no need to prefix
+        # storage paths.
+        # Except of course for thumbnails... see generate_save_swift_path
+        # for that case.
+        if kw['specialpath'] and kw['specialpath'] != 'temp':
+            original_filepath = '/'.join(
+                (kw['specialpath'], original_filepath)
+            )
+
+        swift_original_uri = (
             self.context.config.SWIFT_HOST +
             self.context.config.SWIFT_API_PATH +
             original_container
         )
 
-        swift_uri += '/'
+        swift_original_uri += '/'
 
-        translated['image'] = swift_uri + filepath
+        translated['image'] = swift_original_uri + original_filepath
 
         filters = []
 
@@ -163,21 +225,8 @@ class ImagesHandler(ImagingHandler):
         if filters:
             translated['filters'] = ':'.join(filters)
 
-        self.context.request_handler.set_header(
-            'xkey',
-            u'File:' + kw['filename'] + u'.' + kw['extension']
-        )
-
-        self.context.request_handler.set_header(
-            'Content-Disposition',
-            u'inline;filename*=UTF-8\'\'%s.%s' % (
-                kw['filename'],
-                kw['extension']
-            )
-        )
-
-        # Save wikimedia-specific save path information
-        # Which will later be used by result storage
+        self.context.wikimedia_original_container = original_container
+        self.context.wikimedia_original_filepath = original_filepath
         self.context.wikimedia_thumbnail_container = thumbnail_container
         self.context.wikimedia_thumbnail_save_path = \
             self.generate_save_swift_path(kw)
@@ -188,22 +237,59 @@ class ImagesHandler(ImagingHandler):
                 self.context.wikimedia_thumbnail_save_path
             )
 
-        self.context.request_handler.set_header(
+        return translated
+
+    def safe_set_header(self, header, value):
+        try:
+            self.set_header(header, value)
+        except ValueError as e:
+            logger.debug('[ImagesHandler] Skip setting invalid header: %r', e)
+
+    def set_headers(self, translated):
+        original_filepath = self.context.wikimedia_original_filepath
+        original_filename = original_filepath.rsplit('/', 1)[1]
+        original_extension = original_filename.rsplit('.', 1)[1]
+        thumbnail_filepath = self.context.wikimedia_thumbnail_save_path
+        thumbnail_extension = thumbnail_filepath.rsplit('.', 1)[1]
+
+        self.safe_set_header(
+            'xkey',
+            u'File:' + original_filename
+        )
+
+        content_disposition = original_filename
+        if thumbnail_extension != original_extension:
+            content_disposition += '.' + thumbnail_extension
+
+        self.safe_set_header(
+            'Content-Disposition',
+            u'inline;filename*=UTF-8\'\'%s' % content_disposition
+        )
+
+        self.safe_set_header(
+            'Wikimedia-Original-Container',
+            self.context.wikimedia_original_container
+        )
+
+        self.safe_set_header(
             'Wikimedia-Thumbnail-Container',
             self.context.wikimedia_thumbnail_container
         )
 
-        self.context.request_handler.set_header(
-            'Wikimedia-Path',
+        self.safe_set_header(
+            'Wikimedia-Original-Path',
+            self.context.wikimedia_original_filepath
+        )
+
+        self.safe_set_header(
+            'Wikimedia-Thumbnail-Path',
             self.context.wikimedia_thumbnail_save_path
         )
 
-        self.context.request_handler.set_header(
+        self.safe_set_header(
             'Thumbor-Parameters',
             json.dumps(translated)
         )
-
-        return translated
 
     @gen.coroutine
     def check_image(self, kw):
@@ -215,6 +301,8 @@ class ImagesHandler(ImagingHandler):
                 str(e)
             )
             return
+
+        self.set_headers(translated_kw)
 
         if self.context.config.MAX_ID_LENGTH > 0:
             # Check if an image with an uuid exists in storage

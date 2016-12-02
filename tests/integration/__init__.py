@@ -27,7 +27,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
     def get_config(self):
         cfg = Config(SECURITY_KEY='ACME-SEC')
 
-        cfg.STORAGE = 'wikimedia_thumbor.storage.request'
+        cfg.STORAGE = 'thumbor.storages.no_storage'
         cfg.LOADER = 'thumbor.loaders.file_loader'
 
         cfg.FILE_LOADER_ROOT_PATH = os.path.join(
@@ -60,7 +60,8 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
         cfg.COMMUNITY_EXTENSIONS = [
             'wikimedia_thumbor.handler.multi',
-            'wikimedia_thumbor.handler.images'
+            'wikimedia_thumbor.handler.images',
+            'wikimedia_thumbor.handler.core'
         ]
 
         cfg.EXIF_FIELDS_TO_KEEP = ['Artist', 'Copyright', 'Description']
@@ -151,7 +152,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
         ssim = compute_ssim(generated, expected)
 
-        assert ssim > expected_ssim, 'Images too dissimilar: %f\n' % ssim
+        assert ssim >= expected_ssim, 'Images too dissimilar: %f\n' % ssim
 
         expected_filesize = os.path.getsize(expected_path)
         generated_filesize = len(result.buffer.getvalue())
