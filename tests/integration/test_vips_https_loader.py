@@ -12,6 +12,7 @@ class WikimediaVipsHttpsLoaderTest(WikimediaTestCase):
             'wikimedia_thumbor.loader.video',
             'wikimedia_thumbor.loader.https'
         ]
+        cfg.LOADER_EXCERPT_LENGTH = 4096
 
         return cfg
 

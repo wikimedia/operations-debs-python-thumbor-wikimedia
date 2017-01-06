@@ -1,5 +1,3 @@
-import platform
-
 from . import WikimediaTestCase
 
 
@@ -13,6 +11,7 @@ class WikimediaHttpsLoaderTest(WikimediaTestCase):
             'wikimedia_thumbor.loader.video',
             'wikimedia_thumbor.loader.https'
         ]
+        cfg.LOADER_EXCERPT_LENGTH = 4096
 
         return cfg
 
@@ -73,9 +72,16 @@ class WikimediaHttpsLoaderTest(WikimediaTestCase):
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/200x/filters:lang(fr):format(png)/https://upload.wikimedia.org/wikipedia/commons/3/39/Speech_bubbles.svg',
             'langfr-200px-Speech_bubbles.svg.png',
-            (0.6 if platform.system() == 'Darwin' else 0.99),
+            0.99,
             1.1
         )
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/400x/filters:lang(fr):format(png)/https://upload.wikimedia.org/wikipedia/commons/e/e9/Northumberland_in_England.svg',
+            '400px-Northumberland_in_England.svg.png',
+            1.0,
+            1.0
+        )
+
 
     def test_pdf(self):
         self.run_and_check_ssim_and_size(

@@ -7,15 +7,20 @@
 # This handler translates mediawiki thumbnail urls into thumbor urls
 # And sets the xkey for Varnish purging purposes
 
+from functools import partial
 from urllib import quote
 import json
+import hashlib
 import md5
+import tornado.ioloop
 import tornado.gen as gen
 
 from thumbor.context import RequestParameters
 from thumbor.handlers import BaseHandler
 from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
+
+from wikimedia_thumbor.poolcounter import PoolCounter
 
 
 BaseHandler._old_error = BaseHandler._error
@@ -38,10 +43,25 @@ def _error(self, status, msg=None):
     self.clear_header('Wikimedia-Original-Path')
     self.clear_header('Wikimedia-Thumbnail-Path')
     self.clear_header('Thumbor-Parameters')
-    BaseHandler._old_error(self, status, msg)
+
+    if status == 429:
+        # 429 is missing from httplib.responses
+        self.set_status(status, 'Too Many Requests')
+    else:
+        self.set_status(status)
+
+    if msg is not None:
+        logger.warn(msg)
+    self.finish()
 
 
 BaseHandler._error = _error
+
+
+def close_poolcounter(pc):
+    logger.debug('[ImagesHandler] PoolCounter cleanup callback')
+    if pc:
+        pc.close()
 
 
 class TranslateError(Exception):
@@ -321,7 +341,86 @@ class ImagesHandler(ImagingHandler):
             )
             return
 
+        throttled = yield self.poolcounter_throttle(translated_kw['image'], kw['extension'])
+
+        if throttled:
+            return
+
         translated_kw['request'] = self.request
         self.context.request = RequestParameters(**translated_kw)
 
         self.execute_image_operations()
+
+    def finish(self):
+        if self.pc:
+            self.pc.close()
+            self.pc = None
+
+        super(ImagesHandler, self).finish()
+
+    @gen.coroutine
+    def poolcounter_throttle_key(self, key, cfg):
+        lock_acquired = yield self.pc.acq4me(key, cfg['workers'], cfg['maxqueue'], cfg['timeout'])
+
+        if lock_acquired:
+            raise tornado.gen.Return(False)
+
+        self.pc.close()
+        self.pc = None
+
+        self._error(
+            429,
+            'Too many thumbnail requests'
+        )
+        raise tornado.gen.Return(True)
+
+    @gen.coroutine
+    def poolcounter_throttle(self, filename, extension):
+        self.pc = None
+
+        if not self.context.config.get('POOLCOUNTER_SERVER', False):
+            raise tornado.gen.Return(False)
+
+        server = self.context.config.POOLCOUNTER_SERVER
+        port = self.context.config.get('POOLCOUNTER_PORT', 7531)
+
+        self.pc = PoolCounter(server, port)
+
+        cfg = self.context.config.get('POOLCOUNTER_CONFIG_PER_IP', False)
+        if cfg:
+            ff = self.request.headers.get('X-Forwarded-For', False)
+            if not ff:
+                logger.warn('[ImagesHandler] No X-Forwarded-For header in request, cannot throttle per IP')
+            else:
+                throttled = yield self.poolcounter_throttle_key('thumbor-ip-%s' % ff, cfg)
+
+                if throttled:
+                    raise tornado.gen.Return(True)
+
+        cfg = self.context.config.get('POOLCOUNTER_CONFIG_PER_ORIGINAL', False)
+        if cfg:
+            name_sha1 = hashlib.sha1(filename).hexdigest()
+
+            throttled = yield self.poolcounter_throttle_key('thumbor-render-%s' % name_sha1, cfg)
+
+            if throttled:
+                raise tornado.gen.Return(True)
+
+        cfg = self.context.config.get('POOLCOUNTER_CONFIG_EXPENSIVE', False)
+        if cfg and extension.lower() in cfg['extensions']:
+            throttled = yield self.poolcounter_throttle_key('thumbor-render-expensive', cfg)
+
+            if throttled:
+                raise tornado.gen.Return(True)
+
+        # This closes the PoolCounter connection in case it hasn't been closed normally.
+        # Which can happen if an exception occured while processing the file, for example.
+        release_timeout = self.context.config.get('POOLCOUNTER_RELEASE_TIMEOUT', False)
+        if release_timeout:
+            logger.debug('[ImagesHandler] Setting up PoolCounter cleanup callback')
+            tornado.ioloop.IOLoop.instance().call_later(
+                release_timeout,
+                partial(close_poolcounter, self.pc)
+            )
+
+        raise tornado.gen.Return(False)

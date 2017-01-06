@@ -87,7 +87,7 @@ def load_sync(context, url, callback):
             )
             f.write(chunk)
 
-        excerpt_length = 1024
+        excerpt_length = context.config.LOADER_EXCERPT_LENGTH
 
         f.seek(0)
         # First kb of the body for MIME detection

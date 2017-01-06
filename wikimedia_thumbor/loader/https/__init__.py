@@ -34,7 +34,7 @@ def cleanup_temp_file(path):
 
 
 def return_contents(response, url, callback, context, f):  # pragma: no cover
-    excerpt_length = 1024
+    excerpt_length = context.config.LOADER_EXCERPT_LENGTH
 
     f.seek(0)
     body = f.read(excerpt_length)
