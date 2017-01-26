@@ -13,7 +13,7 @@ class Http404Filter(logging.Filter):
         import re
 
         try:
-            matches = re.match('.*HTTP 404.*', unicode(record.msg))
+            matches = re.match('.*get_object failed.*', unicode(record.msg))
         except:
             matches = None
 

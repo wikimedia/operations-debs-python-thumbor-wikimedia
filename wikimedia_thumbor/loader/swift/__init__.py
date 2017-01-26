@@ -78,6 +78,9 @@ def load_sync(context, url, callback):
             path,
             resp_chunk_size=context.config.HTTP_LOADER_MAX_BODY_SIZE
         )
+
+        context.metrics.incr('swift_loader.status.success')
+
         logging.disable(logging.NOTSET)
 
         f = NamedTemporaryFile(delete=False)
@@ -114,11 +117,13 @@ def load_sync(context, url, callback):
         logging.disable(logging.NOTSET)
         result.successful = False
         result.error = LoaderResult.ERROR_NOT_FOUND
-        logger.error('[SWIFT_LOADER] get_object failed: %r' % e)
+        logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e))
+        context.metrics.incr('swift_loader.status.client_exception')
     except requests.ConnectionError as e:
         logging.disable(logging.NOTSET)
         result.successful = False
         result.error = LoaderResult.ERROR_UPSTREAM
-        logger.error('[SWIFT_LOADER] get_object failed: %r' % e)
+        logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e))
+        context.metrics.incr('swift_loader.status.connection_error')
 
     callback(result)

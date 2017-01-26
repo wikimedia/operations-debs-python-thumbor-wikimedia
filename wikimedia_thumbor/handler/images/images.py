@@ -352,11 +352,13 @@ class ImagesHandler(ImagingHandler):
         self.execute_image_operations()
 
     def finish(self):
-        if self.pc:
+        if hasattr(self, 'pc') and self.pc:
             self.pc.close()
             self.pc = None
 
         super(ImagesHandler, self).finish()
+
+        self.context.metrics.incr('response.status.' + str(self.get_status()))
 
     @gen.coroutine
     def poolcounter_throttle_key(self, key, cfg):
@@ -367,6 +369,8 @@ class ImagesHandler(ImagingHandler):
 
         self.pc.close()
         self.pc = None
+
+        logger.error('[ImagesHandler] Throttled by PoolCounter: %s %r' % (key, cfg))
 
         self._error(
             429,
@@ -392,6 +396,7 @@ class ImagesHandler(ImagingHandler):
             if not ff:
                 logger.warn('[ImagesHandler] No X-Forwarded-For header in request, cannot throttle per IP')
             else:
+                ff = ff.split(', ')[0]
                 throttled = yield self.poolcounter_throttle_key('thumbor-ip-%s' % ff, cfg)
 
                 if throttled:
