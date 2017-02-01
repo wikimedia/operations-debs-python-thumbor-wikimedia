@@ -110,6 +110,8 @@ def _parse_time_status(context, url, callback, process, status):
         result = LoaderResult()
 
         _http_code_from_stderr(process, result)
+        process.stdout.close()
+        process.stderr.close()
 
         callback(result)
     else:
@@ -121,6 +123,9 @@ def _parse_time_status(context, url, callback, process, status):
                 callback
             )
         )
+
+        process.stdout.close()
+        process.stderr.close()
 
 
 def _parse_time(context, url, callback, output):
@@ -201,6 +206,9 @@ def _process_done(
     else:
         result.successful = True
         result.buffer = output_file.read()
+
+    process.stdout.close()
+    process.stderr.close()
 
     output_file.close()
 

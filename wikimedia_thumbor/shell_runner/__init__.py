@@ -49,7 +49,7 @@ class ShellRunner:
             tasks.write('%s\n' % pid)
 
     @classmethod
-    def popen(cls, command, context, stdin=None, env=None):
+    def popen(cls, command, context, env=None):
         wrapped_command = ShellRunner.wrap_command(
             command,
             context
@@ -62,32 +62,21 @@ class ShellRunner:
         if env is not None:  # pragma: no cover
             combined_env.update(env)
 
-        if stdin is None:
-            proc = subprocess.Popen(
-                wrapped_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=combined_env,
-                preexec_fn=partial(cls.preexec, context)
-            )
-        else:  # pragma: no cover
-            proc = subprocess.Popen(
-                wrapped_command,
-                stdout=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=combined_env,
-                preexec_fn=partial(cls.preexec, context)
-            )
-            proc.stdin.write(stdin)
+        proc = subprocess.Popen(
+            wrapped_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=combined_env,
+            preexec_fn=partial(cls.preexec, context)
+        )
 
         return proc
 
     @classmethod
-    def command(cls, command, context, stdin=None, env=None):
+    def command(cls, command, context, env=None):
         start = datetime.datetime.now()
 
-        proc = cls.popen(command, context, stdin, env)
+        proc = cls.popen(command, context, env)
 
         stdout, stderr = proc.communicate()
 

@@ -19,23 +19,27 @@ from thumbor.utils import logger
 
 
 class Storage(BaseStorage):
-    def __init__(self, context):
-        super(Storage, self).__init__(context)
+    swiftconn = None
+
+    @property
+    def swift(self):
+        if Storage.swiftconn:
+            return Storage.swiftconn
 
         authurl = (
             self.context.config.SWIFT_HOST +
             self.context.config.SWIFT_AUTH_PATH
         )
 
-        # Doesn't actually connect, this happens lazily on the first
-        # get_object or put_object call
-        self.swift = client.Connection(
+        Storage.swiftconn = client.Connection(
             user=self.context.config.SWIFT_USER,
             key=self.context.config.SWIFT_KEY,
             authurl=authurl,
             timeout=self.context.config.SWIFT_CONNECTION_TIMEOUT,
             retries=self.context.config.SWIFT_RETRIES
         )
+
+        return Storage.swiftconn
 
     def uri(self):  # pragma: no cover
         return (
@@ -48,7 +52,7 @@ class Storage(BaseStorage):
     # Coverage strangely reports lines lacking coverage in that function that
     # don't make sense
     def put(self, bytes):  # pragma: no cover
-        logger.debug('[Swift] put')
+        logger.debug('[SWIFT_STORAGE] put')
 
         if not hasattr(self.context, 'wikimedia_thumbnail_container'):
             return
@@ -75,13 +79,13 @@ class Storage(BaseStorage):
             # headers, because the response has already been sent when saving
             # to Swift happens (which is the right thing to do).
         except Exception as e:
-            logger.error('[Swift] put exception: %r' % e)
+            logger.error('[SWIFT_STORAGE] put exception: %r' % e)
             # We cannnot let exceptions bubble up, because they would leave
             # the client's connection hanging
 
     @return_future
     def get(self, callback):
-        logger.debug('[Swift] get: %r %r' % (
+        logger.debug('[SWIFT_STORAGE] get: %r %r' % (
                 self.context.wikimedia_thumbnail_container,
                 self.context.wikimedia_thumbnail_save_path
             )
@@ -106,7 +110,7 @@ class Storage(BaseStorage):
                 'Swift-Time', duration
             )
 
-            logger.debug('[Swift] found')
+            logger.debug('[SWIFT_STORAGE] found')
             callback(data)
         # We want this to be exhaustive because not catching an exception here
         # would result in the request hanging indefinitely
@@ -114,9 +118,9 @@ class Storage(BaseStorage):
             logging.disable(logging.NOTSET)
             # No need to log this one, it's expected behavior when the
             # requested object isn't there
-            logger.debug('[Swift] missing')
+            logger.debug('[SWIFT_STORAGE] missing')
             callback(None)
         except Exception as e:
             logging.disable(logging.NOTSET)
-            logger.error('[Swift] get exception: %r' % e)
+            logger.error('[SWIFT_STORAGE] get exception: %r' % e)
             callback(None)
