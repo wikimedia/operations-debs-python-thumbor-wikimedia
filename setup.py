@@ -12,7 +12,7 @@ tests_require = [
 
 setup(
     name='wikimedia_thumbor',
-    version='0.1.33',
+    version='0.1.35',
     url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
     license='MIT',
     author='Gilles Dubuc, Wikimedia Foundation',
@@ -25,8 +25,7 @@ setup(
         'libthumbor>=1.3.2',
         'manhole',
         'python-swiftclient',
-        'thumbor==6.0.1',
-        'wand'
+        'thumbor==6.0.1'
     ],
     extras_require={
         'tests': tests_require,

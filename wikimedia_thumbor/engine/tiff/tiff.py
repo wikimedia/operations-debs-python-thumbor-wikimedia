@@ -23,20 +23,4 @@ BaseWikimediaEngine.add_format(
 
 class Engine(BaseWikimediaEngine):
     def create_image(self, buffer):
-        img = super(Engine, self).create_image(buffer)
-
-        try:
-            page = self.context.request.page
-
-            if page <= len(img.sequence):
-                for i in range(0, page - 1):
-                    # Remove any page before the one we want
-                    del(img.sequence[0])
-        except AttributeError:
-            pass
-
-        # Remove any page after the one we want
-        while len(img.sequence) > 1:
-            del(img.sequence[1])
-
-        return img
+        return super(Engine, self).create_image(buffer)

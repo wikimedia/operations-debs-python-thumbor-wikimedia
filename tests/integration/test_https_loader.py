@@ -82,7 +82,6 @@ class WikimediaHttpsLoaderTest(WikimediaTestCase):
             1.0
         )
 
-
     def test_pdf(self):
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/400x/filters:page(19)/https://upload.wikimedia.org/wikipedia/commons/d/dc/Jeremy_Bentham%2C_A_Fragment_on_Government_(1891).pdf',
@@ -112,7 +111,8 @@ class WikimediaHttpsLoaderTest(WikimediaTestCase):
 
     def test_question_mark_original(self):
         self.run_and_check_ssim_and_size(
-            'thumbor/unsafe/300x/https://upload.wikimedia.org/wikipedia/commons/c/c4/Interieur,_overzicht_tijdens_restauratie_%28%3F%29_-_Rolduc_-_20357536_-_RCE.jpg',
+            'thumbor/unsafe/300x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/https://upload.wikimedia.org/wikipedia/commons/'
+            + 'c/c4/Interieur,_overzicht_tijdens_restauratie_%28%3F%29_-_Rolduc_-_20357536_-_RCE.jpg',
             '300px-Interieur.jpg',
             0.95,
             1.0

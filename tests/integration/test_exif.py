@@ -93,7 +93,7 @@ class WikimediaExifTest(WikimediaTestCase):
         self.run_and_check_ssim_size_and_exif(
             'thumbor/unsafe/800x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/Munich_subway_station_Westfriedhof.jpg',
             '800px-Munich_subway_station_Westfriedhof.jpg',
-            0.97,
+            0.96,
             1.1,
             {
                 'Artist': 'Martin Falbisoner',

@@ -12,8 +12,6 @@
 # ImageMagick engine
 
 from tempfile import NamedTemporaryFile
-import wand.image as image
-from wand.api import library, ctypes
 
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
@@ -21,110 +19,47 @@ from thumbor.engines import BaseEngine
 from wikimedia_thumbor.shell_runner import ShellRunner
 from wikimedia_thumbor.exiftool_runner import ExiftoolRunner
 
-# wand artificially limits the options you can set on the image object
 
-image.OPTIONS |= {'jpeg:sampling-factor', 'jpeg:size', 'tiff:exif-properties'}
-
-# wand doesn't support reading pixel blobs out of the box,
-# only file blobs, so we have to monkey-patch that in
-
-library.MagickConstituteImage.argtypes = [
-    ctypes.c_void_p,
-    ctypes.c_size_t,
-    ctypes.c_size_t,
-    ctypes.c_char_p,
-    ctypes.c_uint,
-    ctypes.c_void_p
-]
-
-# similarly, wand doesn't support setting the interlacing scheme
-
-library.MagickSetInterlaceScheme.argtypes = [
-    ctypes.c_void_p,
-    ctypes.c_int,
-]
-
-ALPHA_TYPES = (
-    'grayscalematte',
-    'palettematte',
-    'truecolormatte'
-)
-
-INTERLACE_SCHEMES = (
-    'NoInterlace',
-    'LineInterlace',
-    'PlaneInterlace',
-    'PartitionInterlace'
-)
-
-
-def read_blob(self, blob, format, width, height):
-    logger.debug('[IM] read_blob: %r %r %r' % (format, width, height))
-
-    r = library.MagickConstituteImage(
-        self.wand,
-        int(width),
-        int(height),
-        format.upper(),
-        int(1),
-        blob
-    )
-
-    if not r:  # pragma: no cover
-        self.raise_exception()
-
-
-def set_interlace_scheme(self, scheme):
-    logger.debug('[IM] set_interlace_scheme: %r' % scheme)
-    try:
-        s = INTERLACE_SCHEMES.index(scheme)
-    except IndexError:  # pragma: no cover
-        raise IndexError(
-            repr(scheme) + ' is an invalid interlace scheme')
-
-    r = library.MagickSetInterlaceScheme(
-        self.wand,
-        s
-    )
-
-    if not r:  # pragma: no cover
-        self.raise_exception()
-
-image.Image.read_blob = read_blob
-image.Image.set_interlace_scheme = set_interlace_scheme
+class ImageMagickException(Exception):
+    pass
 
 
 class Engine(BaseEngine):
     exiftool = ExiftoolRunner()
 
     def create_image(self, buffer):
+        self.temp_file_created = False
+
         # This should be enough for now, if memory blows up on huge files we
         # can could use an mmap here
         if hasattr(self.context, 'wikimedia_original_file'):
-            fname = self.context.wikimedia_original_file.name
-            with open(fname, 'r') as content_file:
-                buffer = content_file.read()
-            ShellRunner.rm_f(fname)
+            logger.debug('[IM] Grabbing filename from context')
+            temp_file = self.context.wikimedia_original_file
+        else:
+            logger.debug('[IM] Dumping buffer into temp file')
+            temp_file = NamedTemporaryFile(delete=False)
+            temp_file.write(buffer)
+            temp_file.close()
+            self.temp_file_created = True
 
         self.exif = {}
+        self.operators = []
 
-        im = image.Image()
-        im.options['tiff:exif-properties'] = 'no'
+        try:
+            self.page = self.context.request.page - 1
+        except AttributeError:
+            self.page = 0
 
-        # Read EXIF data from buffer first. This will get us the
+        # Read EXIF data from file first. This will get us the
         # size if we need it for the jpeg:size option, as well as the
         # ICC profile name in case we need to do profile swapping and
         # the various EXIF fields we want to keep
-        if self.extension == '.jpg':
-            self.read_exif(buffer)
-            if 'ImageSize' in self.exif:
-                self.jpeg_size(im, self.exif['ImageSize'])
+        self.read_exif(temp_file)
 
-        im.read(blob=buffer)
+        return temp_file
 
-        return im
-
-    def jpeg_size(self, im, exif_image_size):
+    def jpeg_size(self):
+        exif_image_size = self.exif['ImageSize']
         buffer_size = exif_image_size.split('x')
         buffer_size = [float(x) for x in buffer_size]
         buffer_ratio = buffer_size[0] / buffer_size[1]
@@ -139,13 +74,14 @@ class Engine(BaseEngine):
             height = round(width / buffer_ratio, 0)
 
         jpeg_size = '%dx%d' % (width, height)
-        logger.debug('[IM] Set jpeg:size hint: %r' % jpeg_size)
-        im.options['jpeg:size'] = jpeg_size
+        logger.debug('[IM] jpeg:size hint: %r' % jpeg_size)
+        return jpeg_size
 
-    def read_exif(self, buffer):
+    def read_exif(self, input_temp_file):
         fields = [
             'ImageSize',
             'ProfileDescription',
+            'ColorType'
         ]
 
         fields += self.context.config.EXIF_FIELDS_TO_KEEP
@@ -160,7 +96,7 @@ class Engine(BaseEngine):
         stdout = Engine.exiftool.command(
             pre=command,
             context=self.context,
-            buffer=buffer
+            input_temp_file=input_temp_file
         )
 
         for s in stdout.splitlines():
@@ -168,6 +104,8 @@ class Engine(BaseEngine):
             self.exif[values[0]] = values[1]
 
         logger.debug('[IM] EXIF: %r' % self.exif)
+
+        self.internal_size = map(int, self.exif['ImageSize'].split('x'))
 
         # If we encounter any non-sRGB ICC profile, we save it to re-apply
         # it to the result
@@ -195,7 +133,7 @@ class Engine(BaseEngine):
         self.icc_profile_saved = Engine.exiftool.command(
             pre=command,
             context=self.context,
-            buffer=buffer
+            input_temp_file=input_temp_file
         )
 
     def process_exif(self, buffer):
@@ -251,21 +189,63 @@ class Engine(BaseEngine):
 
         extension = extension.lstrip('.')
 
-        self.image.compression_quality = quality
-
         config = self.context.config
+
+        # -quality in ImageMagick has a different meaning for PNG
+        # See https://www.imagemagick.org/script/command-line-options.php#quality
+        if extension == 'png':
+            quality = '95'
+
+        operators = [
+            '-quality',
+            '%s' % quality
+        ]
 
         if hasattr(config, 'CHROMA_SUBSAMPLING') and config.CHROMA_SUBSAMPLING:
             cs = config.CHROMA_SUBSAMPLING
             logger.debug('[IM] Chroma subsampling: %r' % cs)
-            self.image.options['jpeg:sampling-factor'] = cs
+            operators += [
+                '-sampling-factor',
+                cs
+            ]
 
         logger.debug('[IM] Generating image with quality %r' % quality)
 
         if extension == 'jpg' and self.context.config.PROGRESSIVE_JPEG:
-            self.image.set_interlace_scheme('PlaneInterlace')
+            operators += [
+                '-interlace',
+                'Plane'
+            ]
 
-        result = self.image.make_blob(format=extension)
+        self.queue_operators(operators)
+
+        last_operators = [
+            '%s[%d]' % (self.image.name, self.page),
+            '%s:-' % extension,
+        ]
+
+        returncode, stderr, result = self.run_operators(last_operators)
+
+        # If the requested page failed, try the cover
+        if returncode != 0 and self.page > 0:
+            self.page = 0
+            last_operators = [
+                '%s[%d]' % (self.image.name, self.page),
+                '%s:-' % extension,
+            ]
+            returncode, stderr, result = self.run_operators(last_operators)
+
+        if returncode != 0:
+            if self.temp_file_created:
+                ShellRunner.rm_f(self.image.name)
+                self.temp_file_created = False
+            raise ImageMagickException('Failed to convert image: %s' % stderr)
+
+        self.operators = []
+
+        # Going forward, we're dealing with a single page document
+        if self.page > 0:
+            self.page = 0
 
         if extension == 'jpg':
             result = self.process_exif(result)
@@ -287,77 +267,129 @@ class Engine(BaseEngine):
         # optimization. I presume Thumbor does that to reduce interpolation
         # but it does so at the expense of cutting off one edge of the image
         if not hasattr(self, 'buffer'):
-            self.image.crop(
-                left=int(crop_left),
-                top=int(crop_top),
-                right=int(crop_right),
-                bottom=int(crop_bottom)
-            )
+            width = int(crop_right) - int(crop_left)
+            height = int(crop_bottom) - int(crop_top)
+
+            operators = [
+                '-crop',
+                '%dx%d+%d+%d' % (width, height, crop_left, crop_top)
+            ]
+
+            self.queue_operators(operators)
 
     def resize(self, width, height):
         logger.debug('[IM] resize: %r %r' % (width, height))
-        self.image.resize(width=int(width), height=int(height))
+
+        self.internal_size = (width, height)
+
+        operators = []
+
+        if self.extension == '.jpg':
+            operators += [
+                '-define',
+                'jpeg:size=%s' % self.jpeg_size()
+            ]
+
+        operators += [
+            '-resize',
+            '%dx%d' % (int(width), int(height))
+        ]
+
+        self.queue_operators(operators)
 
     def flip_horizontally(self):
         logger.debug('[IM] flip_horizontally')
-        self.image.flop()
+
+        self.queue_operators(['-flop'])
 
     def flip_vertically(self):
         logger.debug('[IM] flip_vertically')
-        self.image.flip()
+
+        self.queue_operators(['-flip'])
 
     def rotate(self, degrees):
         logger.debug('[IM] rotate: %r' % degrees)
-        self.image.rotate(degree=degrees)
+
+        self.queue_operators(['-rotate', '%s' % degrees])
 
     def reorientate(self):
         logger.debug('[IM] reorientate')
 
-        # Wand has auto_orient() function only in 4.1+
-        if hasattr(self.image, 'auto_orient'):
-            self.image.auto_orient()
-            return
-
-        # Attempt fallback to ImageMagick library's native function
-        # If old Wand and recent IM
-        if hasattr(library, 'MagickAutoOrientImage'):
-            result = library.MagickAutoOrientImage(self.image.wand)
-
-        if not result:  # pragma: no cover
-            self.image.raise_exception()
+        self.queue_operators(['-auto-orient'])
 
     def image_data_as_rgb(self, update_image=True):
         logger.debug('[IM] image_data_as_rgb: %r' % update_image)
 
-        converted = self.image.convert(self.mode)
+        operators = [
+            '%s[%d]' % (self.image.name, self.page),
+            '%s:-' % self.mode
+        ]
+
+        returncode, stderr, converted = self.run_operators(operators)
+
+        # If the requested page failed, try the cover
+        if returncode != 0 and self.page > 0:
+            self.page = 0
+            operators = [
+                '%s[%d]' % (self.image.name, self.page),
+                '%s:-' % self.mode
+            ]
+            returncode, stderr, converted = self.run_operators(operators)
+
+        if returncode != 0:
+            if self.temp_file_created:
+                ShellRunner.rm_f(self.image.name)
+                self.temp_file_created = False
+            raise ImageMagickException('Failed to convert image to %s: %s' % (self.mode, stderr))
+
+        self.operators = []
+
+        # Going forward, we're dealing with a single page document
+        if self.page > 0:
+            self.page = 0
 
         if update_image:
-            self.image = converted
+            with open(self.image.name, 'w') as f:
+                f.write(converted)
 
-        return self.mode, converted.make_blob()
+        return self.mode, converted
 
     def set_image_data(self, data):
         logger.debug('[IM] set_image_data')
 
-        width, height = self.image.size
-
-        rgb = image.Image()
-        rgb.read_blob(
-            blob=data,
-            format=self.mode,
-            width=width,
-            height=height
-        )
-
-        self.image = rgb
+        with open(self.image.name, 'w') as f:
+            f.write(data)
 
     @property
     def mode(self):
-        if self.image.type in ALPHA_TYPES:
+        if 'ColorType' in self.exif and self.exif['ColorType'] == 'RGB with Alpha':
             return 'RGBA'
 
         return 'RGB'
 
     @property
     def size(self):
-        return self.image.size
+        return self.internal_size
+
+    def queue_operators(self, operators):
+        self.operators += operators
+
+        logger.debug('[IM] Queued operators: %r' % self.operators)
+
+    def run_operators(self, extra_operators):
+        command = [
+            self.context.config.CONVERT_PATH,
+            '-define',
+            'tiff:exif-properties=no'  # Otherwise IM treats a bunch of warnings as errors
+        ]
+
+        command += self.operators
+
+        command += extra_operators
+
+        returncode, stderr, stdout = ShellRunner.command(
+            command,
+            self.context,
+        )
+
+        return returncode, stderr, stdout

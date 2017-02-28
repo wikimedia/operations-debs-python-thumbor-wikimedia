@@ -7,6 +7,7 @@ from ssim import compute_ssim
 
 from tornado.ioloop import IOLoop
 from tornado.testing import AsyncHTTPTestCase
+from tornado.httpclient import HTTPRequest
 
 from thumbor.config import Config
 from thumbor.context import Context, ServerParameters
@@ -21,8 +22,9 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         return IOLoop.instance()
 
     def retrieve(self, url):
-        self.http_client.fetch(self.get_url(url), self.stop)
-        return self.wait(timeout=300)
+        request = HTTPRequest(url=self.get_url(url), request_timeout=60)
+        self.http_client.fetch(request, self.stop)
+        return self.wait(timeout=60)
 
     def get_config(self):
         cfg = Config(SECURITY_KEY='ACME-SEC')
@@ -45,6 +47,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.GHOSTSCRIPT_PATH = which('gs')
         cfg.DDJVU_PATH = which('ddjvu')
         cfg.RSVG_CONVERT_PATH = which('rsvg-convert')
+        cfg.CONVERT_PATH = which('convert')
         timeout = which(
             'gtimeout' if platform.system() == 'Darwin' else 'timeout'
         )
@@ -159,6 +162,6 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
         sizes = (generated_filesize, expected_filesize)
         assert generated_filesize <= expected_filesize * size_tolerance, \
-            'Generated file bigger than size tolerance: %d vs %d ' % sizes
+            'Generated file bigger than size tolerance: %d generated vs %d expected' % sizes
 
         return generated

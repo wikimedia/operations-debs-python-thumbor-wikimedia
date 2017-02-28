@@ -50,14 +50,14 @@ class Filter(BaseFilter):
         destination_sum = float(width + height)
         resize_ratio = destination_sum / source_sum
 
+        logger.debug('[conditional_sharpen] Original size: %dx%d Target size: %dx%d' % (original_width, original_height, width, height))
+
         if resize_ratio < resize_ratio_threshold:
             logger.debug('[conditional_sharpen] apply unsharp mask')
-            # convert -unsharp (radius)x(sigma)+(amount)+(threshold)
-            self.engine.image.unsharp_mask(
-                radius=radius,
-                sigma=sigma,
-                amount=amount,
-                threshold=threshold
-            )
+            operators = [
+                '-unsharp',
+                '%fx%f+%f+%f' % (radius, sigma, amount, threshold)
+            ]
+            self.engine.queue_operators(operators)
         else:
             logger.debug('[conditional_sharpen] skip, ratio below limit')
