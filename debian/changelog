@@ -1,3 +1,9 @@
+python-thumbor-wikimedia (0.1.35-2) jessie-wikimedia; urgency=low
+
+  * Add CONVERT_PATH to debian/40-wikimedia.conf
+
+ -- Filippo Giunchedi <filippo@wikimedia.org>  Wed, 01 Mar 2017 12:21:34 +0100
+
 python-thumbor-wikimedia (0.1.35-1) jessie-wikimedia; urgency=low
 
   * New upstream release
