@@ -12,6 +12,8 @@ from urllib import quote
 import json
 import hashlib
 import md5
+import memcache
+import random
 import tornado.ioloop
 import tornado.gen as gen
 
@@ -31,6 +33,21 @@ BaseHandler._old_error = BaseHandler._error
 # don't make it to ImagesHandler since they don't match the
 # handlers' regexp.
 def _error(self, status, msg=None):
+    # If the error isn't due to throttling, we increase a
+    # failure counter for the given xkey, which will let us
+    # avoid re-trying thumbnails bound to fail too many times
+    xkey = self._headers.get('xkey', False)
+    mc = self.failure_memcache()
+    if status != 429 and xkey and mc:
+        key = str(self.context.config.get('FAILURE_THROTTLING_PREFIX', '') + xkey)
+        counter = mc.get(key)
+        if not counter:
+            # We add randomness to the expiry to avoid stampedes
+            duration = self.context.config.get('FAILURE_THROTTLING_DURATION', 3600)
+            mc.set(key, '1', duration + random.randint(0, 300))
+        else:
+            mc.incr(key)
+
     # Errors should explicitely not be cached
     self.set_header(
         'Cache-Control',
@@ -54,6 +71,19 @@ def _error(self, status, msg=None):
         logger.warn(msg)
     self.finish()
 
+
+def _mc(self):
+    if not hasattr(self.context.config, 'FAILURE_THROTTLING_MEMCACHE'):
+        return False
+
+    if hasattr(self, 'failure_mc'):
+        return self.failure_mc
+
+    self.failure_mc = memcache.Client(self.context.config.FAILURE_THROTTLING_MEMCACHE)
+    return self.failure_mc
+
+
+BaseHandler.failure_memcache = _mc
 
 BaseHandler._error = _error
 
@@ -271,11 +301,9 @@ class ImagesHandler(ImagingHandler):
         original_extension = original_filename.rsplit('.', 1)[1]
         thumbnail_filepath = self.context.wikimedia_thumbnail_save_path
         thumbnail_extension = thumbnail_filepath.rsplit('.', 1)[1]
+        xkey = u'File:' + original_filename
 
-        self.safe_set_header(
-            'xkey',
-            u'File:' + original_filename
-        )
+        self.safe_set_header('xkey', xkey)
 
         content_disposition = original_filename
         if thumbnail_extension != original_extension:
@@ -311,6 +339,8 @@ class ImagesHandler(ImagingHandler):
             json.dumps(translated)
         )
 
+        return xkey
+
     @gen.coroutine
     def check_image(self, kw):
         try:
@@ -322,7 +352,18 @@ class ImagesHandler(ImagingHandler):
             )
             return
 
-        self.set_headers(translated_kw)
+        xkey = self.set_headers(translated_kw)
+        mc = self.failure_memcache()
+
+        if mc and xkey:
+            key = str(self.context.config.get('FAILURE_THROTTLING_PREFIX', '') + xkey)
+            counter = mc.get(key)
+            if counter and int(counter) >= self.context.config.get('FAILURE_THROTTLING_MAX', 4):
+                self._error(
+                    429,
+                    'Too many thumbnail requests for failing image'
+                )
+                return
 
         if self.context.config.MAX_ID_LENGTH > 0:
             # Check if an image with an uuid exists in storage
@@ -429,3 +470,26 @@ class ImagesHandler(ImagingHandler):
             )
 
         raise tornado.gen.Return(False)
+
+    # With our IM engine, exceptions may occur during _load_results
+    # Which Thumbor doesn't handle gracefully
+    def _load_results(self, context):
+        try:
+            results, content_type = BaseHandler._load_results(self, context)
+        except Exception:
+            logger.exception('[ImagesHandler] Exception during _load_results')
+            self._error(500)
+            return None, None
+
+        return results, content_type
+
+    # Similarly, after the _load_requests neutering happening above, thumbor
+    # Would still try to send a response to the client after the 500 error
+    def _write_results_to_client(self, context, results, content_type):
+        if results is not None:
+            BaseHandler._write_results_to_client(self, context, results, content_type)
+
+    # ... and would also try to store empty results
+    def _store_results(self, context, results):
+        if results is not None:
+            BaseHandler._store_results(self, context, results)

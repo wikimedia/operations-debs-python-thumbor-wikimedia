@@ -1,4 +1,12 @@
-python-thumbor-wikimedia (0.1.35-2) jessie-wikimedia; urgency=low
+python-thumbor-wikimedia (0.1.36-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/control
+   - add dependency on python-memcache
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Wed, 15 Mar 2017 10:11:00 +0000
+
+ython-thumbor-wikimedia (0.1.35-2) jessie-wikimedia; urgency=low
 
   * Add CONVERT_PATH to debian/40-wikimedia.conf
 
