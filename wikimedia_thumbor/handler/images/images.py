@@ -68,7 +68,7 @@ def _error(self, status, msg=None):
         self.set_status(status)
 
     if msg is not None:
-        logger.warn(msg)
+        logger.warn(msg, extra={'url': self.context.request.url})
     self.finish()
 
 
@@ -339,6 +339,11 @@ class ImagesHandler(ImagingHandler):
             json.dumps(translated)
         )
 
+        self.safe_set_header(
+            'Request-Date',
+            self.request.headers.get('Request-Date', 'None')
+        )
+
         return xkey
 
     @gen.coroutine
@@ -382,13 +387,13 @@ class ImagesHandler(ImagingHandler):
             )
             return
 
+        translated_kw['request'] = self.request
+        self.context.request = RequestParameters(**translated_kw)
+
         throttled = yield self.poolcounter_throttle(translated_kw['image'], kw['extension'])
 
         if throttled:
             return
-
-        translated_kw['request'] = self.request
-        self.context.request = RequestParameters(**translated_kw)
 
         self.execute_image_operations()
 
@@ -411,7 +416,8 @@ class ImagesHandler(ImagingHandler):
         self.pc.close()
         self.pc = None
 
-        logger.error('[ImagesHandler] Throttled by PoolCounter: %s %r' % (key, cfg))
+        log_extra = {'url': self.context.request.url}
+        logger.error('[ImagesHandler] Throttled by PoolCounter: %s %r' % (key, cfg), extra=log_extra)
 
         self._error(
             429,
@@ -426,10 +432,7 @@ class ImagesHandler(ImagingHandler):
         if not self.context.config.get('POOLCOUNTER_SERVER', False):
             raise tornado.gen.Return(False)
 
-        server = self.context.config.POOLCOUNTER_SERVER
-        port = self.context.config.get('POOLCOUNTER_PORT', 7531)
-
-        self.pc = PoolCounter(server, port)
+        self.pc = PoolCounter(self.context)
 
         cfg = self.context.config.get('POOLCOUNTER_CONFIG_PER_IP', False)
         if cfg:
@@ -473,6 +476,10 @@ class ImagesHandler(ImagingHandler):
 
     # With our IM engine, exceptions may occur during _load_results
     # Which Thumbor doesn't handle gracefully
+    # This should be fixed in Thumbor 6.3.0:
+    # https://github.com/thumbor/thumbor/commit/9fba8e62ae339eb9a0ab5bbdfb2ef1318b20db13
+    # When we upgrade to Thumbor >= 6.3.0 we should be able to remove these overrides
+    # on _load_results, _write_results_to_client and _store_results
     def _load_results(self, context):
         try:
             results, content_type = BaseHandler._load_results(self, context)

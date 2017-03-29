@@ -19,7 +19,6 @@
 # nor having multiple exiftool processes.
 
 
-import datetime
 from tempfile import NamedTemporaryFile
 
 from thumbor.utils import logger
@@ -37,7 +36,8 @@ class ExiftoolRunner:
         buffer='',
         input_temp_file=None
     ):
-        start = datetime.datetime.now()
+        if context:
+            log_extra = {'url': context.request.url}
 
         if not input_temp_file:
             input_temp_file = NamedTemporaryFile()
@@ -49,26 +49,19 @@ class ExiftoolRunner:
         command.append(input_temp_file.name)
         command += post
 
-        logger.debug('[ExiftoolRunner] command: %r' % command)
+        if context:
+            logger.debug('[ExiftoolRunner] command: %r' % command, extra=log_extra)
+        else:
+            logger.debug('[ExiftoolRunner] command: %r' % command)
 
         code, stderr, stdout = ShellRunner.command(command, context)
 
         input_temp_file.close()
 
-        duration = datetime.datetime.now() - start
-
-        cls.add_duration_header(context, duration)
-
         if stderr:
-            logger.error('[ExiftoolRunner] error: %r' % stderr)
+            if context:
+                logger.error('[ExiftoolRunner] error: %r' % stderr, extra=log_extra)
+            else:
+                logger.error('[ExiftoolRunner] error: %r' % stderr)
 
         return stdout
-
-    @classmethod
-    def add_duration_header(cls, context, duration):
-        duration = int(round(duration.total_seconds() * 1000, 0))
-
-        context.request_handler.add_header(
-            'Exiftool-Time',
-            duration
-        )

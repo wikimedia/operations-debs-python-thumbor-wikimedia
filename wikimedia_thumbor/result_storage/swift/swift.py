@@ -31,12 +31,20 @@ class Storage(BaseStorage):
             self.context.config.SWIFT_AUTH_PATH
         )
 
+        # This allows us to set the value via config, instead of depending on the
+        # x-storage-url header returned by Swift during auth. This is a requirement
+        # for communicating with Swift via HTTPS.
+        os_options = {
+            'object_storage_url': self.context.config.SWIFT_HOST + self.context.config.SWIFT_API_PATH
+        }
+
         Storage.swiftconn = client.Connection(
             user=self.context.config.SWIFT_USER,
             key=self.context.config.SWIFT_KEY,
             authurl=authurl,
             timeout=self.context.config.SWIFT_CONNECTION_TIMEOUT,
-            retries=self.context.config.SWIFT_RETRIES
+            retries=self.context.config.SWIFT_RETRIES,
+            os_options=os_options
         )
 
         return Storage.swiftconn
@@ -52,7 +60,7 @@ class Storage(BaseStorage):
     # Coverage strangely reports lines lacking coverage in that function that
     # don't make sense
     def put(self, bytes):  # pragma: no cover
-        logger.debug('[SWIFT_STORAGE] put')
+        self.debug('[SWIFT_STORAGE] put')
 
         if not hasattr(self.context, 'wikimedia_thumbnail_container'):
             return
@@ -79,13 +87,13 @@ class Storage(BaseStorage):
             # headers, because the response has already been sent when saving
             # to Swift happens (which is the right thing to do).
         except Exception as e:
-            logger.error('[SWIFT_STORAGE] put exception: %r' % e)
+            self.error('[SWIFT_STORAGE] put exception: %r' % e)
             # We cannnot let exceptions bubble up, because they would leave
             # the client's connection hanging
 
     @return_future
     def get(self, callback):
-        logger.debug('[SWIFT_STORAGE] get: %r %r' % (
+        self.debug('[SWIFT_STORAGE] get: %r %r' % (
                 self.context.wikimedia_thumbnail_container,
                 self.context.wikimedia_thumbnail_save_path
             )
@@ -110,7 +118,7 @@ class Storage(BaseStorage):
                 'Swift-Time', duration
             )
 
-            logger.debug('[SWIFT_STORAGE] found')
+            self.debug('[SWIFT_STORAGE] found')
             callback(data)
         # We want this to be exhaustive because not catching an exception here
         # would result in the request hanging indefinitely
@@ -118,9 +126,15 @@ class Storage(BaseStorage):
             logging.disable(logging.NOTSET)
             # No need to log this one, it's expected behavior when the
             # requested object isn't there
-            logger.debug('[SWIFT_STORAGE] missing')
+            self.debug('[SWIFT_STORAGE] missing')
             callback(None)
         except Exception as e:
             logging.disable(logging.NOTSET)
-            logger.error('[SWIFT_STORAGE] get exception: %r' % e)
+            self.error('[SWIFT_STORAGE] get exception: %r' % e)
             callback(None)
+
+    def debug(self, message):
+        logger.debug(message, extra={'url': self.context.request.url})
+
+    def error(self, message):
+        logger.error(message, extra={'url': self.context.request.url})

@@ -16,8 +16,6 @@ import os
 import shutil
 from tempfile import mkdtemp
 
-from thumbor.utils import logger
-
 from wikimedia_thumbor.engine import BaseWikimediaEngine
 from wikimedia_thumbor.engine import CommandError
 from wikimedia_thumbor.shell_runner import ShellRunner  # noqa
@@ -93,12 +91,12 @@ class Engine(BaseWikimediaEngine):
         result = self.shrink(buffer, shrink_factor)
 
         self.extension = self.target_format()
-        logger.debug('[VIPS] Setting extension to: %s' % self.extension)
+        self.debug('[VIPS] Setting extension to: %s' % self.extension)
 
         return super(Engine, self).create_image(result)
 
     def shrink(self, buffer, shrink_factor):
-        logger.debug('[VIPS] Shrinking with command')
+        self.debug('[VIPS] Shrinking with command')
         self.prepare_source(buffer)
 
         try:

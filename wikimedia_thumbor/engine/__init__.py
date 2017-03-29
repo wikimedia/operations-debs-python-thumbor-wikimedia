@@ -48,22 +48,22 @@ class BaseWikimediaEngine(IMEngine):
         # When requests don't come through the wikimedia url handler
         # and the format isn't specified, we default to JPG output
         if self.context.request.format is None:
-            logger.debug('[BWE] Defaulting to .jpg')
+            self.debug('[BWE] Defaulting to .jpg')
             extension = '.jpg'
         else:
             extension = self.context.request.format
-            logger.debug('[BWE] Rendering %s' % extension)
+            self.debug('[BWE] Rendering %s' % extension)
 
         return super(BaseWikimediaEngine, self).read(extension, quality)
 
     def prepare_source(self, buffer):
         if hasattr(self.context, 'wikimedia_original_file'):
-            logger.debug('[BWE] Found source file in context')
+            self.debug('[BWE] Found source file in context')
             self.source = self.context.wikimedia_original_file.name
             del self.context.wikimedia_original_file
             return
 
-        logger.debug('[BWE] Create source file from buffer')
+        self.debug('[BWE] Create source file from buffer')
         # Put temp files into their own temp folder to avoid
         # exploits where converters might access other files in the same folder
         self.temp_dir = mkdtemp()
@@ -98,3 +98,6 @@ class BaseWikimediaEngine(IMEngine):
         self.cleanup_source()
 
         return stdout
+
+    def debug(self, message):
+        logger.debug(message, extra={'url': self.context.request.url})

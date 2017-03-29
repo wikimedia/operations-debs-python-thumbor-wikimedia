@@ -20,14 +20,15 @@ from thumbor.utils import logger
 
 
 class PoolCounter:
-    def __init__(self, server, port):
-        self.server = server
-        self.port = port
+    def __init__(self, context):
+        self.server = context.config.POOLCOUNTER_SERVER
+        self.port = context.config.get('POOLCOUNTER_PORT', 7531)
+        self.context = context
         self.stream = None
 
     @gen.coroutine
     def connect(self):
-        logger.debug('[PoolCounter] Connecting to: %s %d' % (self.server, self.port))
+        self.debug('[PoolCounter] Connecting to: %s %d' % (self.server, self.port))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self.stream = tornado.iostream.IOStream(s)
         yield self.stream.connect((self.server, self.port))
@@ -38,7 +39,7 @@ class PoolCounter:
             self.connect()
 
         try:
-            logger.debug('[PoolCounter] ACQ4ME %s %d %d %d' % (key, workers, maxqueue, timeout))
+            self.debug('[PoolCounter] ACQ4ME %s %d %d %d' % (key, workers, maxqueue, timeout))
             yield self.stream.write('ACQ4ME %s %d %d %d\n' % (key, workers, maxqueue, timeout))
             data = yield self.stream.read_until('\n')
         except socket.error as e:
@@ -53,7 +54,7 @@ class PoolCounter:
             self.connect()
 
         try:
-            logger.debug('[PoolCounter] RELEASE')
+            self.debug('[PoolCounter] RELEASE')
             yield self.stream.write('RELEASE\n')
             data = yield self.stream.read_until('\n')
         except socket.error as e:
@@ -64,10 +65,13 @@ class PoolCounter:
 
     def close(self):
         if self.stream:
-            logger.debug('[PoolCounter] Disconnecting')
+            self.debug('[PoolCounter] Disconnecting')
             self.stream.close()
             self.stream = None
             return True
         else:
-            logger.debug('[PoolCounter] Already disconnected')
+            self.debug('[PoolCounter] Already disconnected')
             return False
+
+    def debug(self, message):
+        logger.debug(message, extra={'url': self.context.request.url})

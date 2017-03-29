@@ -15,6 +15,7 @@ import datetime
 import errno
 from functools import partial
 import os
+import re
 import subprocess
 
 from thumbor.utils import logger
@@ -43,7 +44,7 @@ class ShellRunner:
 
         pid = os.getpid()
 
-        logger.debug('[ShellRunner] Adding pid %r to cgroup' % pid)
+        cls.debug(context, '[ShellRunner] Adding pid %r to cgroup' % pid)
 
         with open(context.config.SUBPROCESS_CGROUP_TASKS_PATH, 'a+') as tasks:
             tasks.write('%s\n' % pid)
@@ -55,7 +56,7 @@ class ShellRunner:
             context
         )
 
-        logger.debug('[ShellRunner] Command: %r' % wrapped_command)
+        cls.debug(context, '[ShellRunner] Command: %r' % wrapped_command)
 
         combined_env = os.environ.copy()
 
@@ -86,13 +87,21 @@ class ShellRunner:
         length = len(stdout)
 
         if length > 1000:
-            logger.debug('Stdout: <too long to display (%d bytes)>' % length)
+            cls.debug(context, '[ShellRunner] Stdout: <too long to display (%d bytes)>' % length)
         else:
-            logger.debug('Stdout: %s' % stdout)
+            cls.debug(context, '[ShellRunner] Stdout: %s' % stdout)
 
-        logger.debug('Stderr: %s' % stderr)
-        logger.debug('Return code: %d' % proc.returncode)
-        logger.debug('Duration: %r' % duration)
+        cls.debug(context, '[ShellRunner] Stderr: %s' % stderr)
+        cls.debug(context, '[ShellRunner] Return code: %d' % proc.returncode)
+        cls.debug(context, '[ShellRunner] Duration: %r' % duration)
+
+        simple_command_name = os.path.basename(command[0])
+        simple_command_name = re.sub(r'[^a-zA-Z0-9-]', r'', simple_command_name)
+
+        context.request_handler.add_header(
+            '%s-Time' % simple_command_name,
+            int(round(duration))
+        )
 
         return proc.returncode, stderr, stdout
 
@@ -104,3 +113,7 @@ class ShellRunner:
         except OSError as e:  # pragma: no cover
             if e.errno != errno.ENOENT:
                 raise
+
+    @classmethod
+    def debug(cls, context, message):
+        logger.debug(message, extra={'url': context.request.url})
