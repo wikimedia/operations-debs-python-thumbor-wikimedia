@@ -30,7 +30,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         ]
 
         cfg.SWIFT_HOST = 'http://swifthost'
-        cfg.SWIFT_API_PATH = '/swift/v1/api/path/'
+        cfg.SWIFT_API_PATH = '/swift/v1/api/path'
         cfg.SWIFT_AUTH_PATH = '/auth/v1.0'
         cfg.SWIFT_USER = 'foo:bar'
         cfg.SWIFT_KEY = 'baz'

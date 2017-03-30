@@ -68,7 +68,10 @@ def _error(self, status, msg=None):
         self.set_status(status)
 
     if msg is not None:
-        logger.warn(msg, extra={'url': self.context.request.url})
+        if self.context.hasattr('request'):
+            logger.warn(msg, extra={'url': self.context.request.url})
+        else:
+            logger.warn(msg)
     self.finish()
 
 
@@ -232,7 +235,7 @@ class ImagesHandler(ImagingHandler):
 
         swift_original_uri = (
             self.context.config.SWIFT_HOST +
-            self.context.config.SWIFT_API_PATH +
+            self.context.config.SWIFT_API_PATH + '/' +
             original_container
         )
 
