@@ -85,8 +85,7 @@ def load_sync(context, url, callback):
         logging.disable(logging.ERROR)
         headers, response = swift(context).get_object(
             container,
-            path,
-            resp_chunk_size=context.config.HTTP_LOADER_MAX_BODY_SIZE
+            path
         )
 
         context.metrics.incr('swift_loader.status.success')
@@ -94,19 +93,17 @@ def load_sync(context, url, callback):
         logging.disable(logging.NOTSET)
 
         f = NamedTemporaryFile(delete=False)
-        for chunk in response:
-            logger.debug(
-                '[SWIFT_LOADER] writing %d bytes to temp file' % len(chunk),
-                extra=log_extra
-            )
-            f.write(chunk)
+        logger.debug(
+            '[SWIFT_LOADER] writing %d bytes to temp file' % len(response),
+            extra=log_extra
+        )
+        f.write(response)
+        f.close()
 
         excerpt_length = context.config.LOADER_EXCERPT_LENGTH
 
-        f.seek(0)
         # First kb of the body for MIME detection
-        body = f.read(excerpt_length)
-        f.close()
+        body = response[:excerpt_length]
 
         if len(body) == excerpt_length:
             logger.debug('[SWIFT_LOADER] return_contents: %s' % f.name, extra=log_extra)
