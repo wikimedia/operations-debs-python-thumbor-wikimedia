@@ -12,7 +12,7 @@ tests_require = [
 
 setup(
     name='wikimedia_thumbor',
-    version='0.1.39',
+    version='0.1.40',
     url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
     license='MIT',
     author='Gilles Dubuc, Wikimedia Foundation',
@@ -26,7 +26,7 @@ setup(
         'manhole',
         'python-memcached',
         'python-swiftclient',
-        'thumbor==6.0.1'
+        'thumbor>=6.3.2'
     ],
     extras_require={
         'tests': tests_require,

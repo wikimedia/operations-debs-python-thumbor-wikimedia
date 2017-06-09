@@ -84,7 +84,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
             ('wikimedia_thumbor.engine.tiff', ['tiff']),
             ('wikimedia_thumbor.engine.ghostscript', ['pdf']),
             ('wikimedia_thumbor.engine.gif', ['gif']),
-            ('wikimedia_thumbor.engine.imagemagick', ['jpg', 'png']),
+            ('wikimedia_thumbor.engine.imagemagick', ['jpg', 'png', 'webp']),
         ]
 
         cfg.FILTERS = [

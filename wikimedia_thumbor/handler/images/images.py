@@ -419,6 +419,10 @@ class ImagesHandler(ImagingHandler):
             self.pc.close()
             self.pc = None
 
+        mc = self.failure_memcache()
+        if mc:
+            mc.disconnect_all()
+
         super(ImagesHandler, self).finish()
 
         self.context.metrics.incr('response.status.' + str(self.get_status()))

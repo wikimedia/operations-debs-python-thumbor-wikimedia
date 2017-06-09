@@ -20,7 +20,7 @@ class WikimediaTest(WikimediaTestCase):
             # Mediawiki generates incorrect dimensions in this test case
             # resulting in soft djvu thumbs
             0.88,
-            1.0
+            1.1
         )
 
     def test_djvu_without_page_filter(self):
@@ -30,7 +30,7 @@ class WikimediaTest(WikimediaTestCase):
             # Mediawiki generates incorrect dimensions in this test case
             # resulting in soft djvu thumbs
             0.87,
-            1.1
+            1.2
         )
 
     def test_djvu_with_out_of_bounds_page(self):
@@ -209,7 +209,7 @@ class WikimediaTest(WikimediaTestCase):
             'thumbor/unsafe/400x/filters:conditional_sharpen(0.0,0.0,0.0,0.0,0.0)/' +
             'PNG_transparency_demonstration_1.png',
             '400px-PNG_transparency_demonstration_1.png',
-            0.99,
+            0.97,
             1.1
         )
 
@@ -224,5 +224,13 @@ class WikimediaTest(WikimediaTestCase):
             'thumbor/unsafe/300x/Jokie.gif',
             '300px-Jokie.gif',
             1.0,
+            1.1
+        )
+
+    def test_webp(self):
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/300x/filters:format(png)/Album_en_blanco_y_negro.webp',
+            '300px-Album_en_blanco_y_negro.webp.png',
+            0.99,
             1.1
         )

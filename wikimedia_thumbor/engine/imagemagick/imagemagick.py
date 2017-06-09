@@ -27,6 +27,24 @@ class ImageMagickException(Exception):
 class Engine(BaseEngine):
     exiftool = ExiftoolRunner()
 
+    @classmethod
+    def add_format(cls, mime, ext, fn):
+        # Unfortunately there is no elegant way to extend Thumbor to support
+        # a new MIME type, which is why this monkey-patching is done here
+        from thumbor.utils import EXTENSION
+        EXTENSION[mime] = ext
+        from thumbor.engines import BaseEngine
+        old_get_mimetype = BaseEngine.get_mimetype
+
+        @classmethod
+        def new_get_mimetype(cls, buffer):
+            if fn(buffer):
+                return mime
+
+            return old_get_mimetype(buffer)
+
+        BaseEngine.get_mimetype = new_get_mimetype
+
     def create_image(self, buffer):
         # This should be enough for now, if memory blows up on huge files we
         # can could use an mmap here
@@ -396,3 +414,10 @@ class Engine(BaseEngine):
 
     def debug(self, message):
         logger.debug(message, extra={'url': self.context.request.url})
+
+
+Engine.add_format(
+    'image/webp',
+    '.webp',
+    lambda buffer: buffer.startswith('RIFF') and buffer.startswith('WEBP', 8)
+)

@@ -26,24 +26,6 @@ class CommandError(Exception):
 
 
 class BaseWikimediaEngine(IMEngine):
-    @classmethod
-    def add_format(cls, mime, ext, fn):
-        # Unfortunately there is no elegant way to extend Thumbor to support
-        # a new MIME type, which is why this monkey-patching is done here
-        from thumbor.utils import EXTENSION
-        EXTENSION[mime] = ext
-        from thumbor.engines import BaseEngine
-        old_get_mimetype = BaseEngine.get_mimetype
-
-        @classmethod
-        def new_get_mimetype(cls, buffer):
-            if fn(buffer):
-                return mime
-
-            return old_get_mimetype(buffer)
-
-        BaseEngine.get_mimetype = new_get_mimetype
-
     def read(self, extension=None, quality=None):
         # When requests don't come through the wikimedia url handler
         # and the format isn't specified, we default to JPG output
