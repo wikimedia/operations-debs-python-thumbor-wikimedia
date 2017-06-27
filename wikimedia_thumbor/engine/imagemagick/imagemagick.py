@@ -79,6 +79,10 @@ class Engine(BaseEngine):
         buffer_size = [float(x) for x in buffer_size]
         buffer_ratio = buffer_size[0] / buffer_size[1]
 
+        if 'Orientation' in self.exif:
+            if '90' in self.exif['Orientation'] or '270' in self.exif['Orientation']:
+                buffer_ratio = buffer_size[1] / buffer_size[0]
+
         width = float(self.context.request.width)
         height = float(self.context.request.height)
 
@@ -96,7 +100,8 @@ class Engine(BaseEngine):
         fields = [
             'ImageSize',
             'ProfileDescription',
-            'ColorType'
+            'ColorType',
+            'Orientation'
         ]
 
         fields += self.context.config.EXIF_FIELDS_TO_KEEP
@@ -271,6 +276,11 @@ class Engine(BaseEngine):
         return result
 
     def crop(self, crop_left, crop_top, crop_right, crop_bottom):
+        # Sometimes thumbor's resize algorithm will try to pre-crop
+        # the image. We don't want that.
+        pass
+
+    def realcrop(self, crop_left, crop_top, crop_right, crop_bottom):
         self.debug(
             '[IM] crop: %r %r %r %r' % (
                 crop_left,
@@ -280,20 +290,15 @@ class Engine(BaseEngine):
             )
         )
 
-        # Sometimes thumbor's resize algorithm will try to pre-crop
-        # the image. However that gets in the way of the jpeg:size
-        # optimization. I presume Thumbor does that to reduce interpolation
-        # but it does so at the expense of cutting off one edge of the image
-        if not hasattr(self, 'buffer'):
-            width = int(crop_right) - int(crop_left)
-            height = int(crop_bottom) - int(crop_top)
+        width = int(crop_right) - int(crop_left)
+        height = int(crop_bottom) - int(crop_top)
 
-            operators = [
-                '-crop',
-                '%dx%d+%d+%d' % (width, height, crop_left, crop_top)
-            ]
+        operators = [
+            '-crop',
+            '%dx%d+%d+%d' % (width, height, crop_left, crop_top)
+        ]
 
-            self.queue_operators(operators)
+        self.queue_operators(operators)
 
     def resize(self, width, height):
         self.debug('[IM] resize: %r %r' % (width, height))
@@ -305,13 +310,15 @@ class Engine(BaseEngine):
         if self.extension == '.jpg':
             operators += [
                 '-define',
-                'jpeg:size=%s' % self.jpeg_size()
+                'jpeg:size=%s' % self.jpeg_size(),
+                '-resize',
+                self.jpeg_size()
             ]
-
-        operators += [
-            '-resize',
-            '%dx%d' % (int(width), int(height))
-        ]
+        else:
+            operators += [
+                '-resize',
+                '%dx%d' % (int(width), int(height))
+            ]
 
         self.queue_operators(operators)
 

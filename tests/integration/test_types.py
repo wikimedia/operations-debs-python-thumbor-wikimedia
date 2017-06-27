@@ -13,6 +13,15 @@ class WikimediaTest(WikimediaTestCase):
             1.0
         )
 
+    def test_portrait_jpg(self):
+        self.run_and_check_ssim_and_size(
+            ('thumbor/unsafe/337x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Green_and_golden_Butterfly_copy.jpg'),
+            '337px-Green_and_golden_Butterfly_copy.jpg',
+            0.97,
+            1.0
+        )
+
     def test_djvu(self):
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/400x/filters:page(2)/Il_cavallarizzo.djvu',

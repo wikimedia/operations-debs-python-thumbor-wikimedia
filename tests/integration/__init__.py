@@ -147,11 +147,11 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
         heights = (generated.size[1], expected.size[1])
         assert abs(generated.size[1] - expected.size[1]) <= 1, \
-            'Height differs too much: %d %d\n' % heights
+            'Height differs too much: %d (generated) %d (expected)\n' % heights
 
         widths = (generated.size[0], expected.size[0])
         assert abs(generated.size[0] - expected.size[0]) <= 1, \
-            'Width differs too much: %d %d\n' % widths
+            'Width differs too much: %d (generated) %d (expected)\n' % widths
 
         ssim = compute_ssim(generated, expected)
 

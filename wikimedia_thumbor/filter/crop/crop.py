@@ -22,4 +22,4 @@ class Filter(BaseFilter):
         BaseFilter.Number,
         BaseFilter.Number)
     def crop(self, left, top, right, bottom):
-        self.engine.crop(left, top, right, bottom)
+        self.engine.realcrop(left, top, right, bottom)
