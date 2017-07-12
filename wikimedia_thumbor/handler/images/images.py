@@ -134,7 +134,7 @@ class ImagesHandler(ImagingHandler):
             r'(?:page(?P<page>\d+)-)?'
             r'(?:lang(?P<lang>[a-zA-Z]+)-)?'
             r'(?P<width>\d+)px-'
-            r'(?:seek=(?P<seek>\d+)-)?'
+            r'(?:(?:seek=|seek%3D)(?P<seek>\d+)-)?'
             r'(?P<end>[^/]+)'
             r'\.(?P<format>[a-zA-Z]+)'
         )
@@ -429,10 +429,19 @@ class ImagesHandler(ImagingHandler):
 
     @gen.coroutine
     def poolcounter_throttle_key(self, key, cfg):
-        lock_acquired = yield self.pc.acq4me(key, cfg['workers'], cfg['maxqueue'], cfg['timeout'])
+        try:
+            lock_acquired = yield self.pc.acq4me(key, cfg['workers'], cfg['maxqueue'], cfg['timeout'])
+        except tornado.iostream.StreamClosedError:
+            # If something is wrong with poolcounter, don't throttle
+            logger.error('[ImagesHandler] Failed to leverage PoolCounter')
+            self.context.metrics.incr('poolcounter.failure')
+            raise tornado.gen.Return(False)
 
         if lock_acquired:
+            self.context.metrics.incr('poolcounter.locked')
             raise tornado.gen.Return(False)
+
+        self.context.metrics.incr('poolcounter.throttled')
 
         self.pc.close()
         self.pc = None

@@ -25,8 +25,9 @@ class Engine(BaseWikimediaEngine):
     def is_svg(cls, buffer):
         # Quite wide, but it's better to let rsvg give a file a shot
         # rather than bail without trying
-        return (buffer.startswith('<?xml') and
-                'http://www.w3.org/2000/svg' in buffer)
+        starts_right = buffer.startswith('<?xml') or buffer.startswith('<svg')
+        has_namespace = 'http://www.w3.org/2000/svg' in buffer
+        return (starts_right and has_namespace)
 
     def create_image(self, buffer):
         self.prepare_source(buffer)
@@ -34,6 +35,7 @@ class Engine(BaseWikimediaEngine):
         command = [
             self.context.config.RSVG_CONVERT_PATH,
             self.source,
+            '-u',
             '-f',
             'png'
         ]
