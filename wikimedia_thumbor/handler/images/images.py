@@ -38,7 +38,7 @@ def _error(self, status, msg=None):
     # avoid re-trying thumbnails bound to fail too many times
     xkey = self._headers.get('xkey', False)
     mc = self.failure_memcache()
-    if status != 429 and xkey and mc:
+    if status != 429 and status != 404 and xkey and mc:
         key = self._mc_encode_key(xkey)
         counter = mc.get(key)
         if not counter:
