@@ -92,6 +92,11 @@ def load_sync(context, url, callback):
 
         logging.disable(logging.NOTSET)
 
+        # XXX hack: If the file is an STL, we overwrite the first five bytes
+        # with the word "solid", to trick the MIME detection pipeline.
+        extension = path[-4:].lower()
+        isSTL = extension == '.stl'
+
         f = NamedTemporaryFile(delete=False)
         logger.debug(
             '[SWIFT_LOADER] writing %d bytes to temp file' % len(response),
@@ -104,6 +109,12 @@ def load_sync(context, url, callback):
 
         # First kb of the body for MIME detection
         body = response[:excerpt_length]
+
+        # See above - text STLs have this string here anyway, and
+        # binary STLs ignore the first 80 bytes, so this string will
+        # be ignored.
+        if isSTL:
+            body = 'solid' + body[5:]
 
         if len(body) == excerpt_length:
             logger.debug('[SWIFT_LOADER] return_contents: %s' % f.name, extra=log_extra)

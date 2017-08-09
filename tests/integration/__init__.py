@@ -47,6 +47,8 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.GHOSTSCRIPT_PATH = which('gs')
         cfg.DDJVU_PATH = which('ddjvu')
         cfg.RSVG_CONVERT_PATH = which('rsvg-convert')
+        cfg.THREED2PNG_PATH = which('3d2png.js')
+        cfg.XVFB_RUN_PATH = which('xvfb-run')
         cfg.CONVERT_PATH = which('convert')
         timeout = which(
             'gtimeout' if platform.system() == 'Darwin' else 'timeout'
@@ -84,6 +86,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
             ('wikimedia_thumbor.engine.tiff', ['tiff']),
             ('wikimedia_thumbor.engine.ghostscript', ['pdf']),
             ('wikimedia_thumbor.engine.gif', ['gif']),
+            ('wikimedia_thumbor.engine.stl', ['stl']),
             ('wikimedia_thumbor.engine.imagemagick', ['jpg', 'png', 'webp']),
         ]
 

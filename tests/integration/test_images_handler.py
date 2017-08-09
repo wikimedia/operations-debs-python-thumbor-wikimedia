@@ -9,6 +9,7 @@ from . import WikimediaTestCase
 class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def setUp(self):
         super(WikimediaImagesHandlerTestCase, self).setUp()
+
         # Undo monkey-patching to be able to inspect headers
         # as if the test requests were successful
         def _error(self, status, msg=None):
@@ -17,9 +18,8 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         BaseHandler._error = _error
 
     def tearDown(self):
-        BaseHandler._error =  BaseHandler._error
+        BaseHandler._error = BaseHandler._error
         super(WikimediaImagesHandlerTestCase, self).tearDown()
-
 
     def get_config(self):
         cfg = Config(SECURITY_KEY='ACME-SEC')

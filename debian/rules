@@ -3,7 +3,7 @@ export PYBUILD_NAME=python-thumbor-wikimedia
 export PYBUILD_TEST_NOSE=1
 export PYBUILD_BEFORE_TEST=cp -R tests {build_dir}
 export PYBUILD_AFTER_TEST=rm -rf {build_dir}/tests
-export PYBUILD_TEST_ARGS=-s tests/ --ignore-files='test_proxy_loader.py|test_huge_video.py|test_https_loader.py|test_vips_https_loader.py'
+export PYBUILD_TEST_ARGS=-s tests/ --ignore-files='test_proxy_loader.py|test_huge_video.py|test_https_loader.py|test_vips_https_loader.py|test_3d.py'
 
 %:
 	dh $@ --with python2 --buildsystem=pybuild

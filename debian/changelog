@@ -1,3 +1,13 @@
+python-thumbor-wikimedia (1.2-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/control
+    - add dependency on xvfb
+  * debian/40-wikimedia.conf
+    - add path configuration for xvfb-run
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Wed, 9 Aug 2017 21:17:00 +0000
+
 python-thumbor-wikimedia (1.1-1) jessie-wikimedia; urgency=low
 
   * New upstream release
