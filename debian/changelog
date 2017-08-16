@@ -1,3 +1,9 @@
+python-thumbor-wikimedia (1.2-2) jessie-wikimedia; urgency=medium
+
+  * Add gsfonts build and runtime dependency
+
+ -- Filippo Giunchedi <filippo@wikimedia.org>  Wed, 16 Aug 2017 10:42:15 +0200
+
 python-thumbor-wikimedia (1.2-1) jessie-wikimedia; urgency=low
 
   * New upstream release
