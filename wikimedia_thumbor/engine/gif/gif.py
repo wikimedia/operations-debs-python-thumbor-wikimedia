@@ -14,6 +14,7 @@
 # Actual processing is handled by the Thumbor built-in gifsicle-based engine
 
 from thumbor.engines.gif import Engine as BaseEngine
+from thumbor.utils import logger
 from wikimedia_thumbor.engine import BaseWikimediaEngine
 from wikimedia_thumbor.shell_runner import ShellRunner
 
@@ -46,4 +47,13 @@ class Engine(BaseEngine):
                 buffer = content_file.read()
             ShellRunner.rm_f(fname)
 
-        return super(Engine, self).load(buffer, extension)
+        super(Engine, self).load(buffer, extension)
+
+        logger.debug('[GIF] Frame count: %d Width: %d Height: %d' % (self.frame_count, self.image_size[0], self.image_size[1]))
+
+        config = self.context.config
+
+        if hasattr(config, 'MAX_ANIMATED_GIF_AREA') and config.MAX_ANIMATED_GIF_AREA:
+            if self.frame_count > 1 and self.image_size[0] * self.image_size[1] > config.MAX_ANIMATED_GIF_AREA:
+                logger.debug('[GIF] GIF is animated and greater than max animated area, keeping first frame')
+                self.operations.append("#0")
