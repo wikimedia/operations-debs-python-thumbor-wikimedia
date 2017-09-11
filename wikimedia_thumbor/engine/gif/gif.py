@@ -54,6 +54,6 @@ class Engine(BaseEngine):
         config = self.context.config
 
         if hasattr(config, 'MAX_ANIMATED_GIF_AREA') and config.MAX_ANIMATED_GIF_AREA:
-            if self.frame_count > 1 and self.image_size[0] * self.image_size[1] > config.MAX_ANIMATED_GIF_AREA:
+            if self.frame_count > 1 and self.image_size[0] * self.image_size[1] * self.frame_count > config.MAX_ANIMATED_GIF_AREA:
                 logger.debug('[GIF] GIF is animated and greater than max animated area, keeping first frame')
                 self.operations.append("#0")

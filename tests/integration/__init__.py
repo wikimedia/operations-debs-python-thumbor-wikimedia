@@ -62,7 +62,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.QUALITY = 79
         cfg.QUALITY_LOW = 40
         cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.0,0.8,1.0,0.0,0.85)'
-        cfg.MAX_ANIMATED_GIF_AREA = 140000
+        cfg.MAX_ANIMATED_GIF_AREA = 500 * 200 * 60
 
         cfg.COMMUNITY_EXTENSIONS = [
             'wikimedia_thumbor.handler.multi',
