@@ -340,7 +340,16 @@ class Engine(BaseEngine):
     def reorientate(self):
         self.debug('[IM] reorientate')
 
-        self.queue_operators(['-auto-orient'])
+        # T173804 Avoid ImageMagick -auto-orient which is overzealous
+        # in interpreting various EXIF fields instead of just Orientation
+
+        if 'Orientation' in self.exif:
+            if '90' in self.exif['Orientation']:
+                self.queue_operators(['-rotate', '90'])
+            elif '270' in self.exif['Orientation']:
+                self.queue_operators(['-rotate', '270'])
+            elif '180' in self.exif['Orientation']:
+                self.queue_operators(['-rotate', '180'])
 
     def image_data_as_rgb(self, update_image=True):
         self.debug('[IM] image_data_as_rgb: %r' % update_image)

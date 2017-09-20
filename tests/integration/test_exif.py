@@ -102,12 +102,48 @@ class WikimediaExifTest(WikimediaTestCase):
             None
         )
 
-    def test_exif_rotation(self):
+    def test_exif_orientation(self):
         self.run_and_check_ssim_size_and_exif(
             'thumbor/unsafe/40x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/EXIF_rotation_180.jpg',
             '40px-EXIF_rotation_180.jpg',
             0.99,
             1.1,
+            None,
+            None
+        )
+        self.run_and_check_ssim_size_and_exif(
+            ('thumbor/unsafe/337x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Green_and_golden_Butterfly_copy.jpg'),
+            '337px-Green_and_golden_Butterfly_copy.jpg',
+            0.97,
+            1.0,
+            None,
+            None
+        )
+        self.run_and_check_ssim_size_and_exif(
+            ('thumbor/unsafe/394x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Rostockstein.jpg'),
+            '394px-Rostockstein.jpg',
+            0.92,
+            1.0,
+            None,
+            None
+        )
+        self.run_and_check_ssim_size_and_exif(
+            ('thumbor/unsafe/450x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Carrie.jpg'),
+            '450px-Carrie.jpg',
+            0.96,
+            1.0,
+            None,
+            None
+        )
+        self.run_and_check_ssim_size_and_exif(
+            ('thumbor/unsafe/447x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Cerkiew.jpg'),
+            '447px-Cerkiew.jpg',
+            0.91,
+            1.0,
             None,
             None
         )
