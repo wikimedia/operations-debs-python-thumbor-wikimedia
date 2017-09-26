@@ -147,6 +147,15 @@ class WikimediaExifTest(WikimediaTestCase):
             None,
             None
         )
+        self.run_and_check_ssim_size_and_exif(
+            ('thumbor/unsafe/337x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Tower.jpg'),
+            '337px-Tower.jpg',
+            0.94,
+            1.0,
+            None,
+            None
+        )
 
     def test_tinyrgb_substitution(self):
         tinyrgb_path = os.path.join(

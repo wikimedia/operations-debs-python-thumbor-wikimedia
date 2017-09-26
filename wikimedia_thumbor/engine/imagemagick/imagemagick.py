@@ -12,6 +12,7 @@
 # ImageMagick engine
 
 from tempfile import NamedTemporaryFile
+from pyexiv2 import ImageMetadata
 
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
@@ -79,8 +80,8 @@ class Engine(BaseEngine):
         buffer_size = [float(x) for x in buffer_size]
         buffer_ratio = buffer_size[0] / buffer_size[1]
 
-        if 'Orientation' in self.exif:
-            if '90' in self.exif['Orientation'] or '270' in self.exif['Orientation']:
+        if 'Pyexiv2Orientation'in self.exif:
+            if self.exif['Pyexiv2Orientation'] in (6, 8):
                 buffer_ratio = buffer_size[1] / buffer_size[0]
 
         width = float(self.context.request.width)
@@ -100,8 +101,7 @@ class Engine(BaseEngine):
         fields = [
             'ImageSize',
             'ProfileDescription',
-            'ColorType',
-            'Orientation'
+            'ColorType'
         ]
 
         fields += self.context.config.EXIF_FIELDS_TO_KEEP
@@ -112,6 +112,23 @@ class Engine(BaseEngine):
         ]
 
         command += ['-{0}'.format(i) for i in fields]
+
+        # T172556 We read EXIF Orientation with pyexiv2 because exiftool is
+        # unreliable for that field (overzealous in the way it interprets the field).
+        # We can't replace all use of exiftool with pyexiv2 because ICC profile
+        # support was only introduced in exiv2 0.26 (not available on Jessie yet)
+        # and it can only extract the ICC profile, not get its name/description upfront.
+        # Which would make the sRGB replacement more difficult (it's unclear how many
+        # variations of the binary content for that family of profiles there are).
+
+        metadata = ImageMetadata(input_temp_file.name)
+        try:
+            metadata.read()
+            if 'Exif.Image.Orientation' in metadata.exif_keys:
+                # Distinctive key name to avoid colliding with EXIF_FIELDS_TO_KEEP
+                self.exif['Pyexiv2Orientation'] = metadata.get('Exif.Image.Orientation').value
+        except IOError:
+            self.debug('[IM] Could not read EXIF with pyexiv2')
 
         stdout = Engine.exiftool.command(
             pre=command,
@@ -343,12 +360,12 @@ class Engine(BaseEngine):
         # T173804 Avoid ImageMagick -auto-orient which is overzealous
         # in interpreting various EXIF fields instead of just Orientation
 
-        if 'Orientation' in self.exif:
-            if '90' in self.exif['Orientation']:
+        if 'Pyexiv2Orientation' in self.exif:
+            if self.exif['Pyexiv2Orientation'] == 6:
                 self.queue_operators(['-rotate', '90'])
-            elif '270' in self.exif['Orientation']:
+            elif self.exif['Pyexiv2Orientation'] == 8:
                 self.queue_operators(['-rotate', '270'])
-            elif '180' in self.exif['Orientation']:
+            elif self.exif['Pyexiv2Orientation'] == 3:
                 self.queue_operators(['-rotate', '180'])
 
     def image_data_as_rgb(self, update_image=True):
