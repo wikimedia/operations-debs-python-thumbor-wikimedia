@@ -11,6 +11,7 @@
 
 # ImageMagick engine
 
+import logging
 from tempfile import NamedTemporaryFile
 from pyexiv2 import ImageMetadata
 
@@ -123,11 +124,15 @@ class Engine(BaseEngine):
 
         metadata = ImageMetadata(input_temp_file.name)
         try:
+            # T178072 pyexviv2 writes to stderr even if the exception is caught
+            logging.disable(logging.ERROR)
             metadata.read()
+            logging.disable(logging.NOTSET)
             if 'Exif.Image.Orientation' in metadata.exif_keys:
                 # Distinctive key name to avoid colliding with EXIF_FIELDS_TO_KEEP
                 self.exif['Pyexiv2Orientation'] = metadata.get('Exif.Image.Orientation').value
         except IOError:
+            logging.disable(logging.NOTSET)
             self.debug('[IM] Could not read EXIF with pyexiv2')
 
         stdout = Engine.exiftool.command(

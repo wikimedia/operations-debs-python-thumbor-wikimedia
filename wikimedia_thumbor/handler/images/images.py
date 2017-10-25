@@ -132,11 +132,11 @@ class ImagesHandler(ImagingHandler):
             r'(?:(?P<lossy>lossy-))?'
             r'(?:(?P<lossless>lossless-))?'
             r'(?:page(?P<page>\d+)-)?'
-            r'(?:lang(?P<lang>[a-zA-Z]+)-)?'
+            r'(?:lang(?P<lang>[0-9a-zA-Z-]+)-)?'
             r'(?P<width>\d+)px-'
             r'(?:(?:seek=|seek%3D)(?P<seek>\d+)-)?'
             r'(?P<end>[^/]+)'
-            r'\.(?P<format>[a-zA-Z]+)'
+            r'\.(?P<format>[0-9a-zA-Z]+)'
         )
 
     def generate_save_swift_path(self, kw):

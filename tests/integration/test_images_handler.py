@@ -209,6 +209,18 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             'format(png):lang(fr)',
             'inline;filename*=UTF-8\'\'1Mcolors.svg.png'
         )
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.svg/langzh-hans-400px-1Mcolors.svg.png',
+            'File:1Mcolors.svg',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.svg',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1Mcolors.svg/langzh-hans-400px-1Mcolors.svg.png',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.svg',
+            'format(png):lang(zh-hans)',
+            'inline;filename*=UTF-8\'\'1Mcolors.svg.png'
+        )
 
     def test_seek(self):
         self.run_and_check_headers(
