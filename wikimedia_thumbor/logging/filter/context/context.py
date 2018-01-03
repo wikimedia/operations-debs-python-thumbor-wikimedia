@@ -30,7 +30,7 @@ class ContextFilter(logging.Filter):
                     '.*thumbor running at \d+.\d+.\d+.\d+:([\d]+).*',
                     unicode(record.msg)
                 )
-            except:
+            except ValueError:
                 matches = None
 
             if matches:

@@ -129,7 +129,13 @@ def _parse_time_status(context, url, callback, process, status):
 
 
 def _parse_time(context, url, callback, output):
-    duration = float(output)
+    # T183907 Some files have completely corrupt duration fields,
+    # but we can still extract their first frame for a thumbnail
+    try:
+        duration = float(output)
+    except ValueError:
+        duration = 0.0
+
     unquoted_url = unquote(url)
 
     try:
@@ -193,6 +199,13 @@ def _process_done(
         output_file,
         status
         ):
+    # T183907 Sometimes ffmpeg returns status 0 and actually fails to
+    # generate a thumbnail. We double-check the existence of the thumbnail
+    # in case of apparent success
+    if status == 0:
+        if os.stat(output_file.name).st_size == 0:
+            status = -1
+
     # If rendering the desired frame fails, attempt to render the
     # first frame instead
     if status != 0 and seek > 0:

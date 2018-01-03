@@ -38,6 +38,32 @@ class WikimediaVideoTest(WikimediaTestCase):
             1.0
         )
 
+        path = os.path.join(
+            os.path.dirname(__file__),
+            'originals',
+            'Cape_Town_under_the_clouds.webm'
+        )
+
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/640x/' + path,
+            '640px--Cape_Town_under_the_clouds.webm.jpg',
+            0.98,
+            1.0
+        )
+
+        path = os.path.join(
+            os.path.dirname(__file__),
+            'originals',
+            'Debris_flow_-_22_juillet_2013_-_Crue_torrentielle_a_Saint_Julien_Montdenis.webm'
+        )
+
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/640x/' + path,
+            '640px--Debris_flow_-_22_juillet_2013_-_Crue_torrentielle_a_Saint_Julien_Montdenis.webm.jpg',
+            0.99,
+            1.0
+        )
+
     def test_webm_with_seek(self):
         path = os.path.join(
             os.path.dirname(__file__),

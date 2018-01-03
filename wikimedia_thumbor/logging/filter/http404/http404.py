@@ -14,7 +14,7 @@ class Http404Filter(logging.Filter):
 
         try:
             matches = re.match('.*get_object failed.*', unicode(record.msg))
-        except:
+        except ValueError:
             matches = None
 
         if self.flag == 'exclude':

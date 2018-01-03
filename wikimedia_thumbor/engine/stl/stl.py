@@ -18,6 +18,7 @@ from io import BytesIO
 
 from wikimedia_thumbor.engine import BaseWikimediaEngine
 from wikimedia_thumbor.shell_runner import ShellRunner
+from wikimedia_thumbor.engine import CommandError
 
 BaseWikimediaEngine.add_format(
     'application/sla',
@@ -60,12 +61,12 @@ class Engine(BaseWikimediaEngine):
             # ...so if we got at east that many bytes...
             if len(remainder) == triangles * 386:
                 # ...and there aren't any extras...
-                extra = stream.read1()
+                extra = stream.read1(1)
                 if len(extra) == 0:
                     # ...this is as close to a golden STL file check as we're
                     # going to get.
                     return True
-        except:
+        except IndexError:
             pass
 
         return False
@@ -95,9 +96,9 @@ class Engine(BaseWikimediaEngine):
 
         try:
             self.command(command)
-        except:
+        except CommandError as e:
             ShellRunner.rm_f(tmppng)
-            raise
+            raise e
 
         tmpfile = open(tmppng, 'rb')
         png = tmpfile.read()
