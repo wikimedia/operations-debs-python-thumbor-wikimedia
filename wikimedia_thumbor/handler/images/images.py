@@ -197,6 +197,11 @@ class ImagesHandler(ImagingHandler):
         if hasattr(self.context.config, 'SWIFT_SHARDED_CONTAINERS'):
             sharded_containers = self.context.config.SWIFT_SHARDED_CONTAINERS
 
+        private_containers = []
+
+        if hasattr(self.context.config, 'SWIFT_PRIVATE_CONTAINERS'):
+            private_containers = self.context.config.SWIFT_PRIVATE_CONTAINERS
+
         projlang = '-'.join((kw['project'], kw['language']))
         original_container = projlang + '-local-public'
         thumbnail_container = projlang + '-local-thumb'
@@ -221,6 +226,8 @@ class ImagesHandler(ImagingHandler):
                 hashed = md5.new(hashed_name).hexdigest()
                 original_shard1 = hashed[:1]
                 original_shard2 = hashed[:2]
+
+        self.context.private = original_container in private_containers
 
         if original_container in sharded_containers:
             original_container += '.' + original_shard2
@@ -373,6 +380,16 @@ class ImagesHandler(ImagingHandler):
                 str(e)
             )
             return
+
+        if self.context.private:
+            received_secret = self.request.headers.get('X-Swift-Secret', False)
+            secret = self.context.config.get('SWIFT_PRIVATE_SECRET', False)
+            if not secret or not received_secret or received_secret != secret:
+                self._error(
+                    401,
+                    'Unauthorized access to private Swift container'
+                )
+                return
 
         xkey = self.set_headers(translated_kw)
         mc = self.failure_memcache()
