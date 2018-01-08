@@ -1,3 +1,9 @@
+python-thumbor-wikimedia (1.10-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Mon, 8 Jan 2018 19:35:00 +0000
+
 python-thumbor-wikimedia (1.9-1) jessie-wikimedia; urgency=low
 
   * New upstream release

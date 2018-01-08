@@ -335,7 +335,7 @@ class ImagesHandler(ImagingHandler):
 
         self.safe_set_header(
             'Content-Disposition',
-            u'inline;filename*=UTF-8\'\'%s' % content_disposition
+            u'inline;filename*=UTF-8\'\'%s' % quote(content_disposition.encode('utf-8'))
         )
 
         self.safe_set_header(

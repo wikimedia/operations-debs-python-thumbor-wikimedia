@@ -37,7 +37,9 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         cfg.SWIFT_SHARDED_CONTAINERS = [
             'wikipedia-en-local-public',
             'wikipedia-en-local-temp',
-            'wikipedia-en-local-thumb'
+            'wikipedia-en-local-thumb',
+            'wikipedia-commons-local-public',
+            'wikipedia-commons-local-thumb'
         ]
         cfg.SWIFT_PATH_PREFIX = 'thumbor/'
         cfg.SWIFT_CONNECTION_TIMEOUT = 1
@@ -289,7 +291,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             '400',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/archive/d/d3/20160729183014!1Mcolors.jpg',
             'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)',
-            'inline;filename*=UTF-8\'\'20160729183014!1Mcolors.jpg'
+            'inline;filename*=UTF-8\'\'20160729183014%211Mcolors.jpg'
         )
 
     def test_lossless_tiff(self):
@@ -318,7 +320,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             'http://swifthost/swift/v1/api/path/'
             + 'wikipedia-en-local-public.d3/d/d3/1M\ncolors.tif',
             'format(png):page(1)',
-            None
+            'inline;filename*=UTF-8\'\'1M%0Acolors.tif.png'
         )
 
     def test_question_mark_original(self):
@@ -332,7 +334,21 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             '400',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1M?colors.tif',
             'format(png):page(1)',
-            'inline;filename*=UTF-8\'\'1M?colors.tif.png'
+            'inline;filename*=UTF-8\'\'1M%3Fcolors.tif.png'
+        )
+
+    def test_percentage_original(self):
+        self.run_and_check_headers(
+            '/wikipedia/commons/thumb/c/ce/Dramatische_daling_insectenpopulatie%2C_75%25_is_verdwenen.webm/800px--Dramatische_daling_insectenpopulatie%2C_75%25_is_verdwenen.webm.jpg',
+            'File:Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm',
+            'wikipedia-commons-local-public.ce',
+            'c/ce/Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm',
+            'wikipedia-commons-local-thumb.ce',
+            'thumbor/c/ce/Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm/800px--Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm.jpg',
+            '800',
+            'http://swifthost/swift/v1/api/path/wikipedia-commons-local-public.ce/c/ce/Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm',
+            'format(jpg)',
+            'inline;filename*=UTF-8\'\'Dramatische_daling_insectenpopulatie%2C_75%25_is_verdwenen.webm.jpg'
         )
 
     def test_temp(self):
@@ -346,7 +362,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             '71',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-temp.57/5/57/20161115090130!fYJSjm.pdf',
             'format(jpg):page(1)',
-            'inline;filename*=UTF-8\'\'20161115090130!fYJSjm.pdf.jpg'
+            'inline;filename*=UTF-8\'\'20161115090130%21fYJSjm.pdf.jpg'
         )
 
     def run_and_check_error(
