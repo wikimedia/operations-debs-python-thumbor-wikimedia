@@ -11,6 +11,7 @@
 
 # Swift loader. Streams objects from Swift with auth
 
+import datetime
 import logging
 import requests
 from functools import partial
@@ -24,6 +25,7 @@ from thumbor.loaders import LoaderResult
 from thumbor.utils import logger
 
 from wikimedia_thumbor.shell_runner import ShellRunner
+from wikimedia_thumbor.logging import record_timing
 
 
 swiftconn = None
@@ -82,15 +84,19 @@ def load_sync(context, url, callback):
             '[SWIFT_LOADER] fetching %s from container %s' % (path, container),
             extra=log_extra
         )
+
+        start = datetime.datetime.now()
+
         logging.disable(logging.ERROR)
         headers, response = swift(context).get_object(
             container,
             path
         )
+        logging.disable(logging.NOTSET)
+
+        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.success', 'Swift-Original-Success-Time')
 
         context.metrics.incr('swift_loader.status.success')
-
-        logging.disable(logging.NOTSET)
 
         # XXX hack: If the file is an STL, we overwrite the first five bytes
         # with the word "solid", to trick the MIME detection pipeline.
@@ -134,12 +140,14 @@ def load_sync(context, url, callback):
 
         result.buffer = body
     except ClientException as e:
+        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.miss', 'Swift-Original-Miss-Time')
         logging.disable(logging.NOTSET)
         result.successful = False
         result.error = LoaderResult.ERROR_NOT_FOUND
         logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e), extra=log_extra)
         context.metrics.incr('swift_loader.status.client_exception')
     except requests.ConnectionError as e:
+        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.exception', 'Swift-Original-Exception-Time')
         logging.disable(logging.NOTSET)
         result.successful = False
         result.error = LoaderResult.ERROR_UPSTREAM

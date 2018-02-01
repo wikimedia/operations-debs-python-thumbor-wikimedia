@@ -9,6 +9,7 @@
 
 from functools import partial
 from urllib import quote
+import datetime
 import json
 import hashlib
 import md5
@@ -23,6 +24,7 @@ from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
 
 from wikimedia_thumbor.poolcounter import PoolCounter
+from wikimedia_thumbor.logging import record_timing
 
 
 BaseHandler._old_error = BaseHandler._error
@@ -38,8 +40,12 @@ def _error(self, status, msg=None):
     # avoid re-trying thumbnails bound to fail too many times
     xkey = self._headers.get('xkey', False)
     mc = self.failure_memcache()
+
     if status != 429 and status != 404 and xkey and mc:
         key = self._mc_encode_key(xkey)
+
+        start = datetime.datetime.now()
+
         counter = mc.get(key)
         if not counter:
             # We add randomness to the expiry to avoid stampedes
@@ -48,11 +54,11 @@ def _error(self, status, msg=None):
         else:
             mc.incr(key)
 
+        record_timing(self.context, datetime.datetime.now() - start, 'memcache.set', 'Memcache-Set-Time')
+
     # Errors should explicitely not be cached
-    self.set_header(
-        'Cache-Control',
-        'no-cache'
-    )
+    self.set_header('Cache-Control', 'no-cache')
+
     self.clear_header('xkey')
     self.clear_header('Content-Disposition')
     self.clear_header('Wikimedia-Original-Container')
@@ -368,6 +374,11 @@ class ImagesHandler(ImagingHandler):
             self.request.headers.get('Request-Date', 'None')
         )
 
+        self.safe_set_header(
+            'Thumbor-Request-Id',
+            self.request.headers.get('Thumbor-Request-Id', 'None')
+        )
+
         return xkey
 
     @gen.coroutine
@@ -396,7 +407,11 @@ class ImagesHandler(ImagingHandler):
 
         if mc and xkey:
             key = self._mc_encode_key(xkey)
+
+            start = datetime.datetime.now()
             counter = mc.get(key)
+            record_timing(self.context, datetime.datetime.now() - start, 'memcache.get', 'Memcache-Get-Time')
+
             if counter and int(counter) >= self.context.config.get('FAILURE_THROTTLING_MAX', 4):
                 self._error(
                     429,
@@ -424,10 +439,14 @@ class ImagesHandler(ImagingHandler):
         translated_kw['request'] = self.request
         self.context.request = RequestParameters(**translated_kw)
 
+        self.poolcounter_time = datetime.timedelta(0)
+
         throttled = yield self.poolcounter_throttle(translated_kw['image'], kw['extension'])
 
         if throttled:
             return
+
+        record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Poolcounter-Time')
 
         self.execute_image_operations()
 
@@ -435,6 +454,7 @@ class ImagesHandler(ImagingHandler):
         if hasattr(self, 'pc') and self.pc:
             self.pc.close()
             self.pc = None
+            self.poolcounter_time = datetime.timedelta(0)
 
         mc = self.failure_memcache()
         if mc:
@@ -446,9 +466,12 @@ class ImagesHandler(ImagingHandler):
 
     @gen.coroutine
     def poolcounter_throttle_key(self, key, cfg):
+        start = datetime.datetime.now()
         try:
             lock_acquired = yield self.pc.acq4me(key, cfg['workers'], cfg['maxqueue'], cfg['timeout'])
+            self.poolcounter_time += datetime.datetime.now() - start
         except tornado.iostream.StreamClosedError:
+            self.poolcounter_time += datetime.datetime.now() - start
             # If something is wrong with poolcounter, don't throttle
             logger.error('[ImagesHandler] Failed to leverage PoolCounter')
             self.context.metrics.incr('poolcounter.failure')
@@ -460,11 +483,17 @@ class ImagesHandler(ImagingHandler):
 
         self.context.metrics.incr('poolcounter.throttled')
 
+        start = datetime.datetime.now()
         self.pc.close()
+        self.poolcounter_time += datetime.datetime.now() - start
         self.pc = None
 
         log_extra = {'url': self.context.request.url}
         logger.error('[ImagesHandler] Throttled by PoolCounter: %s %r' % (key, cfg), extra=log_extra)
+
+        record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Poolcounter-Time')
+
+        self.poolcounter_time = datetime.timedelta(0)
 
         self._error(
             429,

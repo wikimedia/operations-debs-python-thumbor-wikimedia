@@ -9,6 +9,8 @@ import manhole
 import os.path
 import tempfile
 
+import thumbor.engines
+
 from thumbor.utils import logger, which
 
 from thumbor.handlers import ContextHandler
@@ -31,6 +33,12 @@ class App(CommunityCoreApp):
         # The gifsicle engine needs to work, regardless of
         # USE_GIFSICLE_ENGINE being on or not
         context.server.gifsicle_path = which('gifsicle')
+
+        # T178072 Disable Thumbor's built-in EXIF parsing, which
+        # emits logger.error messages constantly because it's trying
+        # to parse our truncated buffer. EXIF parsing is done in our
+        # imagemagick engine instead.
+        thumbor.engines.METADATA_AVAILABLE = False
 
         super(App, self).__init__(context)
 

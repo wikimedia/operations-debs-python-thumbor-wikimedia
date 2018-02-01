@@ -17,6 +17,8 @@ from tornado.concurrent import return_future
 from thumbor.result_storages import BaseStorage
 from thumbor.utils import logger
 
+from wikimedia_thumbor.logging import record_timing
+
 
 class Storage(BaseStorage):
     swiftconn = None
@@ -76,17 +78,20 @@ class Storage(BaseStorage):
             if len(xkey):
                 headers = {'xkey': xkey[0]}
 
+            start = datetime.datetime.now()
             self.swift.put_object(
                 self.context.wikimedia_thumbnail_container,
                 self.context.wikimedia_thumbnail_save_path,
                 bytes,
                 headers=headers
             )
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.write.success')
 
             # We cannot set the time spent in putting to swift in the response
             # headers, because the response has already been sent when saving
             # to Swift happens (which is the right thing to do).
         except Exception as e:
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.write.exception')
             self.error('[SWIFT_STORAGE] put exception: %r' % e)
             # We cannnot let exceptions bubble up, because they would leave
             # the client's connection hanging
@@ -100,10 +105,11 @@ class Storage(BaseStorage):
         )
 
         try:
-            start = datetime.datetime.now()
-
             # swiftclient has this annoying habit of writing an ERROR log
             # entry for the ClientException, regardless of it being caught
+
+            start = datetime.datetime.now()
+
             logging.disable(logging.ERROR)
             headers, data = self.swift.get_object(
                 self.context.wikimedia_thumbnail_container,
@@ -111,12 +117,7 @@ class Storage(BaseStorage):
             )
             logging.disable(logging.NOTSET)
 
-            duration = datetime.datetime.now() - start
-            duration = int(round(duration.total_seconds() * 1000))
-
-            self.context.request_handler.add_header(
-                'Swift-Time', duration
-            )
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.success', 'Swift-Thumbnail-Success-Time')
 
             self.debug('[SWIFT_STORAGE] found')
             callback(data)
@@ -124,12 +125,14 @@ class Storage(BaseStorage):
         # would result in the request hanging indefinitely
         except ClientException:
             logging.disable(logging.NOTSET)
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.miss', 'Swift-Thumbnail-Miss-Time')
             # No need to log this one, it's expected behavior when the
             # requested object isn't there
             self.debug('[SWIFT_STORAGE] missing')
             callback(None)
         except Exception as e:
             logging.disable(logging.NOTSET)
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.exception', 'Swift-Thumbnail-Exception-Time')
             self.error('[SWIFT_STORAGE] get exception: %r' % e)
             callback(None)
 
