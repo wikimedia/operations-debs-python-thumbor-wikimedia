@@ -11,6 +11,9 @@
 
 # SVG engine
 
+import codecs
+import re
+
 from wikimedia_thumbor.engine import BaseWikimediaEngine
 
 BaseWikimediaEngine.add_format(
@@ -25,7 +28,8 @@ class Engine(BaseWikimediaEngine):
     def is_svg(cls, buffer):
         # Quite wide, but it's better to let rsvg give a file a shot
         # rather than bail without trying
-        starts_right = buffer.startswith('<?xml') or buffer.startswith('<svg')
+        # T186500 There can be an optional UTF-8 BOM at the beginning
+        starts_right = re.match(r'^(' + codecs.BOM_UTF8 + r')?<(\?xml|svg)', buffer[:10])
         has_namespace = 'http://www.w3.org/2000/svg' in buffer
         return (starts_right and has_namespace)
 

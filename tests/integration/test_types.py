@@ -81,6 +81,12 @@ class WikimediaTest(WikimediaTestCase):
             1.0,
             1.0
         )
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/400x/filters:format(png)/Tree_edges.svg',
+            '400px-Tree_edges.svg.png',
+            0.99,
+            1.2
+        )
 
     def test_pdf(self):
         self.run_and_check_ssim_and_size(

@@ -9,6 +9,8 @@
 
 from functools import partial
 from urllib import quote
+from wsgiref.handlers import format_date_time
+from time import mktime
 import datetime
 import json
 import hashlib
@@ -383,6 +385,14 @@ class ImagesHandler(ImagingHandler):
 
     @gen.coroutine
     def check_image(self, kw):
+        now = datetime.datetime.now()
+        timestamp = mktime(now.timetuple())
+
+        self.safe_set_header(
+            'Thumbor-Request-Date',
+            format_date_time(timestamp)
+        )
+
         try:
             translated_kw = self.translate(kw)
         except TranslateError as e:
@@ -488,8 +498,13 @@ class ImagesHandler(ImagingHandler):
         self.poolcounter_time += datetime.datetime.now() - start
         self.pc = None
 
-        log_extra = {'url': self.context.request.url}
-        logger.error('[ImagesHandler] Throttled by PoolCounter: %s %r' % (key, cfg), extra=log_extra)
+        log_extra = {
+            'url': self.context.request.url,
+            'poolcounter-key': key,
+            'poolcounter-config': cfg
+        }
+
+        logger.error('[ImagesHandler] Throttled by PoolCounter', extra=log_extra)
 
         record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Poolcounter-Time')
 
