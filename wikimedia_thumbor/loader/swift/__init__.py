@@ -25,7 +25,7 @@ from thumbor.loaders import LoaderResult
 from thumbor.utils import logger
 
 from wikimedia_thumbor.shell_runner import ShellRunner
-from wikimedia_thumbor.logging import record_timing
+from wikimedia_thumbor.logging import record_timing, log_extra
 
 
 swiftconn = None
@@ -35,8 +35,9 @@ def should_run(url):  # pragma: no cover
     return True
 
 
-def cleanup_temp_file(request_url, path):
-    logger.debug('[SWIFT_LOADER] cleanup_temp_file: %s' % path, extra={'url': request_url})
+def cleanup_temp_file(context):
+    path = context.wikimedia_original_file.name
+    logger.debug('[SWIFT_LOADER] cleanup_temp_file: %s' % path, extra=log_extra(context))
     ShellRunner.rm_f(path)
 
 
@@ -71,8 +72,7 @@ def swift(context):
 
 
 def load_sync(context, url, callback):
-    log_extra = {'url': context.request.url}
-    logger.debug('[SWIFT_LOADER] load_sync: %s' % url, extra=log_extra)
+    logger.debug('[SWIFT_LOADER] load_sync: %s' % url, extra=log_extra(context))
 
     result = LoaderResult()
 
@@ -82,7 +82,7 @@ def load_sync(context, url, callback):
     try:
         logger.debug(
             '[SWIFT_LOADER] fetching %s from container %s' % (path, container),
-            extra=log_extra
+            extra=log_extra(context)
         )
 
         start = datetime.datetime.now()
@@ -94,7 +94,7 @@ def load_sync(context, url, callback):
         )
         logging.disable(logging.NOTSET)
 
-        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.success', 'Swift-Original-Success-Time')
+        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.success', 'Thumbor-Swift-Original-Success-Time')
 
         context.metrics.incr('swift_loader.status.success')
 
@@ -106,7 +106,7 @@ def load_sync(context, url, callback):
         f = NamedTemporaryFile(delete=False)
         logger.debug(
             '[SWIFT_LOADER] writing %d bytes to temp file' % len(response),
-            extra=log_extra
+            extra=log_extra(context)
         )
         f.write(response)
         f.close()
@@ -123,35 +123,34 @@ def load_sync(context, url, callback):
             body = 'solid' + body[5:]
 
         if len(body) == excerpt_length:
-            logger.debug('[SWIFT_LOADER] return_contents: %s' % f.name, extra=log_extra)
+            logger.debug('[SWIFT_LOADER] return_contents: %s' % f.name, extra=log_extra(context))
             context.wikimedia_original_file = f
 
             tornado.ioloop.IOLoop.instance().call_later(
                 context.config.HTTP_LOADER_TEMP_FILE_TIMEOUT,
                 partial(
                     cleanup_temp_file,
-                    context.request.url,
-                    context.wikimedia_original_file.name
+                    context
                 )
             )
         else:
             logger.debug('[SWIFT_LOADER] return_contents: small body')
-            cleanup_temp_file(context.request.url, f.name)
+            cleanup_temp_file(context)
 
         result.buffer = body
     except ClientException as e:
-        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.miss', 'Swift-Original-Miss-Time')
+        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.miss', 'Thumbor-Swift-Original-Miss-Time')
         logging.disable(logging.NOTSET)
         result.successful = False
         result.error = LoaderResult.ERROR_NOT_FOUND
-        logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e), extra=log_extra)
+        logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e), extra=log_extra(context))
         context.metrics.incr('swift_loader.status.client_exception')
     except requests.ConnectionError as e:
-        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.exception', 'Swift-Original-Exception-Time')
+        record_timing(context, datetime.datetime.now() - start, 'swift.original.read.exception', 'Thumbor-Swift-Original-Exception-Time')
         logging.disable(logging.NOTSET)
         result.successful = False
         result.error = LoaderResult.ERROR_UPSTREAM
-        logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e), extra=log_extra)
+        logger.error('[SWIFT_LOADER] get_object failed: %s %r' % (url, e), extra=log_extra(context))
         context.metrics.incr('swift_loader.status.connection_error')
 
     callback(result)

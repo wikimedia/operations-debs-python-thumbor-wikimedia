@@ -17,6 +17,7 @@ import tornado.gen as gen
 import tornado.iostream
 
 from thumbor.utils import logger
+from wikimedia_thumbor.logging import log_extra
 
 
 class PoolCounter:
@@ -74,4 +75,4 @@ class PoolCounter:
             return False
 
     def debug(self, message):
-        logger.debug(message, extra={'url': self.context.request.url})
+        logger.debug(message, extra=log_extra(self.context))

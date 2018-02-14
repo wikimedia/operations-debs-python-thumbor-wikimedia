@@ -28,6 +28,8 @@ class Engine(BaseWikimediaEngine):
         except AttributeError:
             page = 1
 
+        self.prepare_source(buffer)
+
         jpg = self.get_jpg_for_page(buffer, page)
 
         # GS is being unhelpful and outputting that error to stdout
@@ -36,13 +38,13 @@ class Engine(BaseWikimediaEngine):
         if len(jpg) < 200 and jpg.find(error) != -1:
             jpg = self.get_jpg_for_page(buffer, 1)
 
+        self.cleanup_source()
+
         self.extension = '.jpg'
 
         return super(Engine, self).create_image(jpg)
 
     def get_jpg_for_page(self, buffer, page):
-        self.prepare_source(buffer)
-
         # We use the command and not the python bindings because those can't
         # use the %stdout option properly. The bindings version writes to
         # stdout forcibly, and that can't be captured with sys.stdout nor the
@@ -64,4 +66,4 @@ class Engine(BaseWikimediaEngine):
             "-f%s" % self.source
         ]
 
-        return self.command(command)
+        return self.command(command, clean_on_error=False, clean_on_success=False)

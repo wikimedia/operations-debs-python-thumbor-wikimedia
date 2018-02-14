@@ -4,6 +4,7 @@
 import traceback
 
 from thumbor.utils import logger
+from wikimedia_thumbor.logging import log_extra
 
 
 class ErrorHandler(object):
@@ -16,9 +17,7 @@ class ErrorHandler(object):
         ex_msg = traceback.format_exception_only(ex_type, value)
         tb_msg = traceback.format_tb(tb)
 
-        log_extra = {
-            'url': context.request.url,
-            'thumbor-request-id': context.request_handler.request.headers.get('Thumbor-Request-Id', 'None'),
-            'traceback': ''.join(tb_msg)
-        }
-        logger.error(''.join(ex_msg), extra=log_extra)
+        extra = log_extra(context)
+        extra['traceback'] = ''.join(tb_msg)
+
+        logger.error(''.join(ex_msg), extra=extra)

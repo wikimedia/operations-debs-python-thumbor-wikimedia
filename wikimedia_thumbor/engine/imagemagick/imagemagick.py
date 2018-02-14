@@ -20,6 +20,7 @@ from thumbor.engines import BaseEngine
 
 from wikimedia_thumbor.shell_runner import ShellRunner
 from wikimedia_thumbor.exiftool_runner import ExiftoolRunner
+from wikimedia_thumbor.logging import log_extra
 
 
 class ImageMagickException(Exception):
@@ -451,7 +452,7 @@ class Engine(BaseEngine):
         return returncode, stderr, stdout
 
     def debug(self, message):
-        logger.debug(message, extra={'url': self.context.request.url})
+        logger.debug(message, extra=log_extra(self.context))
 
 
 Engine.add_format(

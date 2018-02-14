@@ -30,7 +30,10 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg = Config(SECURITY_KEY='ACME-SEC')
 
         cfg.STORAGE = 'thumbor.storages.no_storage'
-        cfg.LOADER = 'thumbor.loaders.file_loader'
+        cfg.LOADER = 'wikimedia_thumbor.loader.file'
+
+        cfg.LOADER_EXCERPT_LENGTH = 4096
+        cfg.HTTP_LOADER_TEMP_FILE_TIMEOUT = 20
 
         cfg.FILE_LOADER_ROOT_PATH = os.path.join(
             os.path.dirname(__file__),
@@ -80,7 +83,6 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.VIPS_ENGINE_MIN_PIXELS = 20000000
 
         cfg.PROXY_ENGINE_ENGINES = [
-            ('wikimedia_thumbor.engine.svg', ['svg']),
             ('wikimedia_thumbor.engine.xcf', ['xcf']),
             ('wikimedia_thumbor.engine.djvu', ['djvu']),
             ('wikimedia_thumbor.engine.vips', ['tiff', 'png']),
@@ -88,6 +90,9 @@ class WikimediaTestCase(AsyncHTTPTestCase):
             ('wikimedia_thumbor.engine.ghostscript', ['pdf']),
             ('wikimedia_thumbor.engine.gif', ['gif']),
             ('wikimedia_thumbor.engine.stl', ['stl']),
+            # SVG should alwayd be the one before last, because of how broad it is (trying all XML documents)
+            ('wikimedia_thumbor.engine.svg', ['svg']),
+            # Imagemagick should always be last, to act as a catch-all since Thumbor defaults to assuming JPG when the document is unknown
             ('wikimedia_thumbor.engine.imagemagick', ['jpg', 'png', 'webp']),
         ]
 

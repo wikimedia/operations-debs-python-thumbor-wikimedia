@@ -17,7 +17,7 @@ from tornado.concurrent import return_future
 from thumbor.result_storages import BaseStorage
 from thumbor.utils import logger
 
-from wikimedia_thumbor.logging import record_timing
+from wikimedia_thumbor.logging import record_timing, log_extra
 
 
 class Storage(BaseStorage):
@@ -117,7 +117,7 @@ class Storage(BaseStorage):
             )
             logging.disable(logging.NOTSET)
 
-            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.success', 'Swift-Thumbnail-Success-Time')
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.success', 'Thumbor-Swift-Thumbnail-Success-Time')
 
             self.debug('[SWIFT_STORAGE] found')
             callback(data)
@@ -125,19 +125,19 @@ class Storage(BaseStorage):
         # would result in the request hanging indefinitely
         except ClientException:
             logging.disable(logging.NOTSET)
-            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.miss', 'Swift-Thumbnail-Miss-Time')
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.miss', 'Thumbor-Swift-Thumbnail-Miss-Time')
             # No need to log this one, it's expected behavior when the
             # requested object isn't there
             self.debug('[SWIFT_STORAGE] missing')
             callback(None)
         except Exception as e:
             logging.disable(logging.NOTSET)
-            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.exception', 'Swift-Thumbnail-Exception-Time')
+            record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.exception', 'Thumbor-Swift-Thumbnail-Exception-Time')
             self.error('[SWIFT_STORAGE] get exception: %r' % e)
             callback(None)
 
     def debug(self, message):
-        logger.debug(message, extra={'url': self.context.request.url})
+        logger.debug(message, extra=log_extra(self.context))
 
     def error(self, message):
-        logger.error(message, extra={'url': self.context.request.url})
+        logger.error(message, extra=log_extra(self.context))

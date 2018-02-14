@@ -28,6 +28,7 @@ from tornado.process import Subprocess
 
 
 from wikimedia_thumbor.shell_runner import ShellRunner
+from wikimedia_thumbor.logging import log_extra
 
 
 def should_run(url):  # pragma: no cover
@@ -86,11 +87,15 @@ def load_sync(context, url, callback):
     )
 
 
-def _http_code_from_stderr(process, result, normalized_url):
+def _http_code_from_stderr(context, process, result, normalized_url):
     result.successful = False
     stderr = process.stderr.read_from_fd()
 
-    logger.error('[Video] Fprobe/ffmpeg errored: %r normalized_url: %r' % (stderr, normalized_url))
+    extra = log_extra(context)
+    extra['stderr'] = stderr
+    extra['normalized_url'] = normalized_url
+
+    logger.error('[Video] Fprobe/ffmpeg errored', extra=extra)
     code = re.match('.*Server returned (\d\d\d).*', stderr)
 
     if code:
@@ -108,7 +113,7 @@ def _parse_time_status(context, normalized_url, callback, process, status):
     if status != 0:
         result = LoaderResult()
 
-        _http_code_from_stderr(process, result, normalized_url)
+        _http_code_from_stderr(context, process, result, normalized_url)
         process.stdout.close()
         process.stderr.close()
 
@@ -212,7 +217,7 @@ def _process_done(
     result = LoaderResult()
 
     if status != 0:  # pragma: no cover
-        _http_code_from_stderr(process, result, normalized_url)
+        _http_code_from_stderr(context, process, result, normalized_url)
     else:
         result.successful = True
         result.buffer = output_file.read()
@@ -226,7 +231,7 @@ def _process_done(
         os.unlink(output_file.name)
     except OSError as e:  # pragma: no cover
         if e.errno != errno.ENOENT:
-            logger.error('[Video] Unable to unlink output file')
+            logger.error('[Video] Unable to unlink output file', extra=log_extra(context))
             raise
 
     callback(result)

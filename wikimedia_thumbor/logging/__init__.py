@@ -11,3 +11,11 @@ def record_timing(context, duration, statsd_key, header_name=None):
             header_name,
             duration
         )
+
+
+def log_extra(context):
+    extras = {
+        'url': context.request.url,
+        'thumbor-request-id': context.request_handler.request.headers.get('Thumbor-Request-Id', 'None')
+    }
+    return extras

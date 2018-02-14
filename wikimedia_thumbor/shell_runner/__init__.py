@@ -19,6 +19,7 @@ import re
 import subprocess
 
 from thumbor.utils import logger
+from wikimedia_thumbor.logging import log_extra
 
 
 class ShellRunner:
@@ -99,7 +100,7 @@ class ShellRunner:
         simple_command_name = re.sub(r'[^a-zA-Z0-9-]', r'', simple_command_name)
 
         context.request_handler.add_header(
-            '%s-Time' % simple_command_name,
+            'Thumbor-%s-Time' % simple_command_name,
             int(round(duration))
         )
 
@@ -116,4 +117,4 @@ class ShellRunner:
 
     @classmethod
     def debug(cls, context, message):
-        logger.debug(message, extra={'url': context.request.url})
+        logger.debug(message, extra=log_extra(context))

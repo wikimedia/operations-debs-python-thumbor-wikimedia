@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
+from wikimedia_thumbor.logging import log_extra
 
 
 def utime():
@@ -89,7 +90,7 @@ class Engine(BaseEngine):
 
         if (hasattr(self.lcl['context'].config, 'SLOW_PROCESSING_LIMIT') and
                 duration > self.lcl['context'].config.SLOW_PROCESSING_LIMIT):
-            logger.error('[Proxy] Request took a long time: %r' % duration)
+            logger.error('[Proxy] Request took a long time: %r' % duration, extra=log_extra(self.lcl['context']))
 
         self.lcl['context'].request_handler.set_header(
             header,
@@ -110,7 +111,7 @@ class Engine(BaseEngine):
 
         # Now that we'll select the right engine, let's initialize it
         self.lcl['context'].request_handler.set_header(
-            'Engine',
+            'Thumbor-Engine',
             enginename
         )
 
@@ -137,13 +138,13 @@ class Engine(BaseEngine):
 
         self.record_timing(
             'processing_time',
-            'Processing-Time',
+            'Thumbor-Processing-Time',
             datetime.datetime.now()
         )
 
         self.record_timing(
             'processing_utime',
-            'Processing-Utime',
+            'Thumbor-Processing-Utime',
             utime()
         )
 

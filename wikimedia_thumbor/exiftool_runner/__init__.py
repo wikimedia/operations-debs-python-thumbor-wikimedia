@@ -24,6 +24,7 @@ from tempfile import NamedTemporaryFile
 from thumbor.utils import logger
 
 from wikimedia_thumbor.shell_runner import ShellRunner
+from wikimedia_thumbor.logging import log_extra
 
 
 class ExiftoolRunner:
@@ -36,9 +37,6 @@ class ExiftoolRunner:
         buffer='',
         input_temp_file=None
     ):
-        if context:
-            log_extra = {'url': context.request.url}
-
         if not input_temp_file:
             input_temp_file = NamedTemporaryFile()
             input_temp_file.write(buffer)
@@ -50,7 +48,7 @@ class ExiftoolRunner:
         command += post
 
         if context:
-            logger.debug('[ExiftoolRunner] command: %r' % command, extra=log_extra)
+            logger.debug('[ExiftoolRunner] command: %r' % command, extra=log_extra(context))
         else:
             logger.debug('[ExiftoolRunner] command: %r' % command)
 
@@ -60,7 +58,7 @@ class ExiftoolRunner:
 
         if stderr:
             if context:
-                logger.error('[ExiftoolRunner] error: %r' % stderr, extra=log_extra)
+                logger.error('[ExiftoolRunner] error: %r' % stderr, extra=log_extra(context))
             else:
                 logger.error('[ExiftoolRunner] error: %r' % stderr)
 

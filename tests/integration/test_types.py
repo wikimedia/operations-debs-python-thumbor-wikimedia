@@ -87,6 +87,12 @@ class WikimediaTest(WikimediaTestCase):
             0.99,
             1.2
         )
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/119x/filters:format(png)/BuickLogo_silber.svg',
+            '119px-BuickLogo_silber.svg.png',
+            1.0,
+            1.0
+        )
 
     def test_pdf(self):
         self.run_and_check_ssim_and_size(

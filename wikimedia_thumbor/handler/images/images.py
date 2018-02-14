@@ -26,7 +26,7 @@ from thumbor.handlers.imaging import ImagingHandler
 from thumbor.utils import logger
 
 from wikimedia_thumbor.poolcounter import PoolCounter
-from wikimedia_thumbor.logging import record_timing
+from wikimedia_thumbor.logging import record_timing, log_extra
 
 
 BaseHandler._old_error = BaseHandler._error
@@ -56,17 +56,17 @@ def _error(self, status, msg=None):
         else:
             mc.incr(key)
 
-        record_timing(self.context, datetime.datetime.now() - start, 'memcache.set', 'Memcache-Set-Time')
+        record_timing(self.context, datetime.datetime.now() - start, 'memcache.set', 'Thumbor-Memcache-Set-Time')
 
     # Errors should explicitely not be cached
     self.set_header('Cache-Control', 'no-cache')
 
     self.clear_header('xkey')
     self.clear_header('Content-Disposition')
-    self.clear_header('Wikimedia-Original-Container')
-    self.clear_header('Wikimedia-Thumbnail-Container')
-    self.clear_header('Wikimedia-Original-Path')
-    self.clear_header('Wikimedia-Thumbnail-Path')
+    self.clear_header('Thumbor-Wikimedia-Original-Container')
+    self.clear_header('Thumbor-Wikimedia-Thumbnail-Container')
+    self.clear_header('Thumbor-Wikimedia-Original-Path')
+    self.clear_header('Thumbor-Wikimedia-Thumbnail-Path')
     self.clear_header('Thumbor-Parameters')
 
     if status == 429:
@@ -77,7 +77,7 @@ def _error(self, status, msg=None):
 
     if msg is not None:
         try:
-            logger.warn(msg, extra={'url': self.context.request.url})
+            logger.warn(msg, extra=log_extra(self.context.request.url))
         except AttributeError:
             logger.warn(msg)
     self.finish()
@@ -347,22 +347,22 @@ class ImagesHandler(ImagingHandler):
         )
 
         self.safe_set_header(
-            'Wikimedia-Original-Container',
+            'Thumbor-Wikimedia-Original-Container',
             self.context.wikimedia_original_container
         )
 
         self.safe_set_header(
-            'Wikimedia-Thumbnail-Container',
+            'Thumbor-Wikimedia-Thumbnail-Container',
             self.context.wikimedia_thumbnail_container
         )
 
         self.safe_set_header(
-            'Wikimedia-Original-Path',
+            'Thumbor-Wikimedia-Original-Path',
             self.context.wikimedia_original_filepath
         )
 
         self.safe_set_header(
-            'Wikimedia-Thumbnail-Path',
+            'Thumbor-Wikimedia-Thumbnail-Path',
             self.context.wikimedia_thumbnail_save_path
         )
 
@@ -372,13 +372,8 @@ class ImagesHandler(ImagingHandler):
         )
 
         self.safe_set_header(
-            'Request-Date',
-            self.request.headers.get('Request-Date', 'None')
-        )
-
-        self.safe_set_header(
-            'Thumbor-Request-Id',
-            self.request.headers.get('Thumbor-Request-Id', 'None')
+            'Nginx-Request-Date',
+            self.request.headers.get('Nginx-Request-Date', 'None')
         )
 
         return xkey
@@ -420,7 +415,7 @@ class ImagesHandler(ImagingHandler):
 
             start = datetime.datetime.now()
             counter = mc.get(key)
-            record_timing(self.context, datetime.datetime.now() - start, 'memcache.get', 'Memcache-Get-Time')
+            record_timing(self.context, datetime.datetime.now() - start, 'memcache.get', 'Thumbor-Memcache-Get-Time')
 
             if counter and int(counter) >= self.context.config.get('FAILURE_THROTTLING_MAX', 4):
                 self._error(
@@ -456,7 +451,7 @@ class ImagesHandler(ImagingHandler):
         if throttled:
             return
 
-        record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Poolcounter-Time')
+        record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Thumbor-Poolcounter-Time')
 
         self.execute_image_operations()
 
@@ -476,6 +471,10 @@ class ImagesHandler(ImagingHandler):
 
     @gen.coroutine
     def poolcounter_throttle_key(self, key, cfg):
+        extra = log_extra(self.context)
+        extra['poolcounter-key'] = key
+        extra['poolcounter-config'] = cfg
+
         start = datetime.datetime.now()
         try:
             lock_acquired = yield self.pc.acq4me(key, cfg['workers'], cfg['maxqueue'], cfg['timeout'])
@@ -483,7 +482,7 @@ class ImagesHandler(ImagingHandler):
         except tornado.iostream.StreamClosedError:
             self.poolcounter_time += datetime.datetime.now() - start
             # If something is wrong with poolcounter, don't throttle
-            logger.error('[ImagesHandler] Failed to leverage PoolCounter')
+            logger.error('[ImagesHandler] Failed to leverage PoolCounter', extra=extra)
             self.context.metrics.incr('poolcounter.failure')
             raise tornado.gen.Return(False)
 
@@ -498,15 +497,9 @@ class ImagesHandler(ImagingHandler):
         self.poolcounter_time += datetime.datetime.now() - start
         self.pc = None
 
-        log_extra = {
-            'url': self.context.request.url,
-            'poolcounter-key': key,
-            'poolcounter-config': cfg
-        }
+        logger.error('[ImagesHandler] Throttled by PoolCounter', extra=extra)
 
-        logger.error('[ImagesHandler] Throttled by PoolCounter', extra=log_extra)
-
-        record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Poolcounter-Time')
+        record_timing(self.context, self.poolcounter_time, 'poolcounter.time', 'Thumbor-Poolcounter-Time')
 
         self.poolcounter_time = datetime.timedelta(0)
 

@@ -86,28 +86,28 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
 
         try:
             wikimedia_original_container = response.headers.get_list(
-                'Wikimedia-Original-Container'
+                'Thumbor-Wikimedia-Original-Container'
             )[0]
         except IndexError:
             wikimedia_original_container = None
 
         try:
             wikimedia_original_path = response.headers.get_list(
-                'Wikimedia-Original-Path'
+                'Thumbor-Wikimedia-Original-Path'
             )[0]
         except IndexError:
             wikimedia_original_path = None
 
         try:
             wikimedia_thumbnail_container = response.headers.get_list(
-                'Wikimedia-Thumbnail-Container'
+                'Thumbor-Wikimedia-Thumbnail-Container'
             )[0]
         except IndexError:
             wikimedia_thumbnail_container = None
 
         try:
             wikimedia_thumbnail_path = response.headers.get_list(
-                'Wikimedia-Thumbnail-Path'
+                'Thumbor-Wikimedia-Thumbnail-Path'
             )[0]
         except IndexError:
             wikimedia_thumbnail_path = None
@@ -133,16 +133,16 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         assert xkey == expected_xkey, 'Incorrect Xkey: %s' % xkey
 
         assert wikimedia_original_container == expected_original_container, \
-            'Wikimedia-Original-Container: %s' % wikimedia_original_container
+            'Thumbor-Wikimedia-Original-Container: %s' % wikimedia_original_container
 
         assert wikimedia_original_path == expected_original_path, \
-            'Wikimedia-Original-Path: %s' % wikimedia_original_path
+            'Thumbor-Wikimedia-Original-Path: %s' % wikimedia_original_path
 
         assert wikimedia_thumbnail_container == expected_thumbnail_container, \
-            'Wikimedia-Thumbnail-Container: %s' % wikimedia_thumbnail_container
+            'Thumbor-Wikimedia-Thumbnail-Container: %s' % wikimedia_thumbnail_container
 
         assert wikimedia_thumbnail_path == expected_thumbnail_path, \
-            'Wikimedia-Thumbnail-Path: %s' % wikimedia_thumbnail_path
+            'Thumbor-Wikimedia-Thumbnail-Path: %s' % wikimedia_thumbnail_path
 
         assert thumbor_parameters['width'] == expected_width, \
             'Thumbor-Parameters width: %s' % thumbor_parameters['width']

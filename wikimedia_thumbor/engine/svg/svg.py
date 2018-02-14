@@ -29,9 +29,8 @@ class Engine(BaseWikimediaEngine):
         # Quite wide, but it's better to let rsvg give a file a shot
         # rather than bail without trying
         # T186500 There can be an optional UTF-8 BOM at the beginning
-        starts_right = re.match(r'^(' + codecs.BOM_UTF8 + r')?<(\?xml|svg)', buffer[:10])
-        has_namespace = 'http://www.w3.org/2000/svg' in buffer
-        return (starts_right and has_namespace)
+        # T187088 The namespace might not be in the excerpt
+        return re.match(r'^(' + codecs.BOM_UTF8 + r')?<(\?xml|svg)', buffer[:10])
 
     def create_image(self, buffer):
         self.prepare_source(buffer)
