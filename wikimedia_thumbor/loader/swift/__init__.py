@@ -35,8 +35,7 @@ def should_run(url):  # pragma: no cover
     return True
 
 
-def cleanup_temp_file(context):
-    path = context.wikimedia_original_file.name
+def cleanup_temp_file(context, path):
     logger.debug('[SWIFT_LOADER] cleanup_temp_file: %s' % path, extra=log_extra(context))
     ShellRunner.rm_f(path)
 
@@ -130,12 +129,13 @@ def load_sync(context, url, callback):
                 context.config.HTTP_LOADER_TEMP_FILE_TIMEOUT,
                 partial(
                     cleanup_temp_file,
-                    context
+                    context,
+                    context.wikimedia_original_file.name
                 )
             )
         else:
             logger.debug('[SWIFT_LOADER] return_contents: small body')
-            cleanup_temp_file(context)
+            cleanup_temp_file(context, f.name)
 
         result.buffer = body
     except ClientException as e:
