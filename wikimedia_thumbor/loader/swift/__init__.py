@@ -29,6 +29,7 @@ from wikimedia_thumbor.logging import record_timing, log_extra
 
 
 swiftconn = None
+swiftconn_private = None
 
 
 def should_run(url):  # pragma: no cover
@@ -41,10 +42,14 @@ def cleanup_temp_file(context, path):
 
 
 def swift(context):
-    global swiftconn
+    global swiftconn, swiftconn_private
 
-    if swiftconn:
-        return swiftconn
+    if context.private:
+        if swiftconn_private:
+            return swiftconn_private
+    else:
+        if swiftconn:
+            return swiftconn
 
     authurl = (
         context.config.SWIFT_HOST +
@@ -58,16 +63,21 @@ def swift(context):
         'object_storage_url': context.config.SWIFT_HOST + context.config.SWIFT_API_PATH
     }
 
-    swiftconn = client.Connection(
-        user=context.config.SWIFT_USER,
-        key=context.config.SWIFT_KEY,
+    conn = client.Connection(
+        user=context.config.SWIFT_PRIVATE_USER if context.private else context.config.SWIFT_USER,
+        key=context.config.SWIFT_PRIVATE_KEY if context.private else context.config.SWIFT_KEY,
         authurl=authurl,
         timeout=context.config.SWIFT_CONNECTION_TIMEOUT,
         retries=context.config.SWIFT_RETRIES,
         os_options=os_options
     )
 
-    return swiftconn
+    if context.private:
+        swiftconn_private = conn
+    else:
+        swiftconn = conn
+
+    return conn
 
 
 def load_sync(context, url, callback):

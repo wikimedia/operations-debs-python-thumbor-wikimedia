@@ -1,3 +1,6 @@
+import pkg_resources
+
+
 def record_timing(context, duration, statsd_key, header_name=None):
     duration = int(round(duration.total_seconds() * 1000))
 
@@ -14,8 +17,20 @@ def record_timing(context, duration, statsd_key, header_name=None):
 
 
 def log_extra(context):
+    try:
+        url = context.request.url
+    except AttributeError:
+        url = None
+
+    try:
+        request_id = context.request_handler.request.headers.get('Thumbor-Request-Id', 'None')
+    except AttributeError:
+        request_id = None
+
     extras = {
-        'url': context.request.url,
-        'thumbor-request-id': context.request_handler.request.headers.get('Thumbor-Request-Id', 'None')
+        'url': url,
+        'thumbor-request-id': request_id,
+        'thumbor-version': pkg_resources.get_distribution('thumbor').version,
+        'wikimedia-thumbor-version': pkg_resources.get_distribution('wikimedia_thumbor').version
     }
     return extras

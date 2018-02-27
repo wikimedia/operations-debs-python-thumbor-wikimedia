@@ -22,11 +22,16 @@ from wikimedia_thumbor.logging import record_timing, log_extra
 
 class Storage(BaseStorage):
     swiftconn = None
+    swiftconn_private = None
 
     @property
     def swift(self):
-        if Storage.swiftconn:
-            return Storage.swiftconn
+        if self.context.private:
+            if Storage.swiftconn_private:
+                return Storage.swiftconn_private
+        else:
+            if Storage.swiftconn:
+                return Storage.swiftconn
 
         authurl = (
             self.context.config.SWIFT_HOST +
@@ -40,16 +45,21 @@ class Storage(BaseStorage):
             'object_storage_url': self.context.config.SWIFT_HOST + self.context.config.SWIFT_API_PATH
         }
 
-        Storage.swiftconn = client.Connection(
-            user=self.context.config.SWIFT_USER,
-            key=self.context.config.SWIFT_KEY,
+        conn = client.Connection(
+            user=self.context.config.SWIFT_PRIVATE_USER if self.context.private else self.context.config.SWIFT_USER,
+            key=self.context.config.SWIFT_PRIVATE_KEY if self.context.private else self.context.config.SWIFT_KEY,
             authurl=authurl,
             timeout=self.context.config.SWIFT_CONNECTION_TIMEOUT,
             retries=self.context.config.SWIFT_RETRIES,
             os_options=os_options
         )
 
-        return Storage.swiftconn
+        if self.context.private:
+            Storage.swiftconn_private = conn
+        else:
+            Storage.swiftconn = conn
+
+        return conn
 
     def uri(self):  # pragma: no cover
         return (
