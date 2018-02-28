@@ -27,10 +27,20 @@ def log_extra(context):
     except AttributeError:
         request_id = None
 
+    try:
+        thumbor_version = pkg_resources.get_distribution('thumbor').version
+    except pkg_resources.DistributionNotFound:
+        thumbor_version = None
+
+    try:
+        wikimedia_thumbor_version = pkg_resources.get_distribution('wikimedia_thumbor').version
+    except pkg_resources.DistributionNotFound:
+        wikimedia_thumbor_version = None
+
     extras = {
         'url': url,
         'thumbor-request-id': request_id,
-        'thumbor-version': pkg_resources.get_distribution('thumbor').version,
-        'wikimedia-thumbor-version': pkg_resources.get_distribution('wikimedia_thumbor').version
+        'thumbor-version': thumbor_version,
+        'wikimedia-thumbor-version': wikimedia_thumbor_version
     }
     return extras
