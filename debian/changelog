@@ -1,3 +1,11 @@
+python-thumbor-wikimedia (1.16-1) jessie-wikimedia; urgency=low
+
+  * New upstream release
+  * debian/control
+    - bump minimum version requirement for python-nose
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Tue, 3 Apr 2018 09:00:00 +0000
+
 python-thumbor-wikimedia (1.15-1) jessie-wikimedia; urgency=low
 
   * New upstream release

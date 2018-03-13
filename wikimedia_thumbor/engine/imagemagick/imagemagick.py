@@ -282,8 +282,13 @@ class Engine(BaseEngine):
             returncode, stderr, result = self.run_operators(last_operators)
 
         if returncode != 0:
-            ShellRunner.rm_f(self.image.name)
-            raise ImageMagickException('Failed to convert image: %s' % stderr)
+            # T179200 ImageMagick may return a non-zero exit code while having
+            # actually rendered a thumbnail of a semi-broken file
+            if self.is_valid_thumbnail(result):
+                self.debug('[IM] errored but still rendered: %s' % stderr)
+            else:
+                ShellRunner.rm_f(self.image.name)
+                raise ImageMagickException('Failed to convert image %s' % stderr)
 
         self.operators = []
 
@@ -394,8 +399,13 @@ class Engine(BaseEngine):
             returncode, stderr, converted = self.run_operators(operators)
 
         if returncode != 0:
-            ShellRunner.rm_f(self.image.name)
-            raise ImageMagickException('Failed to convert image to %s: %s' % (self.mode, stderr))
+            # T179200 ImageMagick may return a non-zero exit code while having
+            # actually rendered a thumbnail of a semi-broken file
+            if self.is_valid_thumbnail(converted):
+                self.debug('[IM] errored but still rendered: %s' % stderr)
+            else:
+                ShellRunner.rm_f(self.image.name)
+                raise ImageMagickException('Failed to convert image to %s: %s' % (self.mode, stderr))
 
         self.operators = []
 
@@ -453,6 +463,29 @@ class Engine(BaseEngine):
 
     def debug(self, message):
         logger.debug(message, extra=log_extra(self.context))
+
+    def is_valid_thumbnail(self, contents):
+        if len(contents) == 0:
+            return False
+
+        temp_file = NamedTemporaryFile(delete=False)
+        temp_file.write(contents)
+        temp_file.close()
+
+        command = [
+            self.context.config.CONVERT_PATH,
+            temp_file.name,
+            'info:'
+        ]
+
+        returncode, stderr, stdout = ShellRunner.command(
+            command,
+            self.context,
+        )
+
+        ShellRunner.rm_f(temp_file.name)
+
+        return returncode == 0
 
 
 Engine.add_format(

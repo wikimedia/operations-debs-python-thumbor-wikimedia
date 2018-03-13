@@ -274,8 +274,10 @@ class ImagesHandler(ImagingHandler):
 
         filters = []
 
-        if kw['format'].lower() in ('jpe', 'jpeg'):
-            kw['format'] = 'jpg'
+        normalized_format = kw['format'].lower()
+
+        if normalized_format in ('jpe', 'jpeg'):
+            normalized_format = 'jpg'
 
         if kw['extension'].lower() in ('jpg', 'jpe', 'jpeg'):
             if (
@@ -289,7 +291,7 @@ class ImagesHandler(ImagingHandler):
                 logger.debug('[ImagesHandler] apply JPG default filters')
                 filters.append(self.context.config.DEFAULT_FILTERS_JPEG)
 
-        filters.append('format(%s)' % kw['format'])
+        filters.append('format(%s)' % normalized_format)
 
         page = kw.get('page')
 
@@ -372,8 +374,8 @@ class ImagesHandler(ImagingHandler):
         )
 
         self.safe_set_header(
-            'Nginx-Request-Date',
-            self.request.headers.get('Nginx-Request-Date', 'None')
+            'Proxy-Request-Date',
+            self.request.headers.get('Proxy-Request-Date', 'None')
         )
 
         return xkey
@@ -568,7 +570,7 @@ class ImagesHandler(ImagingHandler):
         try:
             results, content_type = BaseHandler._load_results(self, context)
         except Exception:
-            logger.exception('[ImagesHandler] Exception during _load_results')
+            logger.exception('[ImagesHandler] Exception during _load_results', extra=log_extra(context))
             self._error(500)
             return None, None
 

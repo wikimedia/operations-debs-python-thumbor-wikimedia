@@ -245,11 +245,39 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.jpe',
             'wikipedia-en-local-thumb.d3',
-            'thumbor/d/d3/1Mcolors.jpe/400px-1Mcolors.jpg',
+            'thumbor/d/d3/1Mcolors.jpe/400px-1Mcolors.jpe',
             '400',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.jpe',
             'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)',
-            'inline;filename*=UTF-8\'\'1Mcolors.jpe.jpg'
+            'inline;filename*=UTF-8\'\'1Mcolors.jpe'
+        )
+
+    def test_jpeg(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.jpeg/400px-1Mcolors.jpeg',
+            'File:1Mcolors.jpeg',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.jpeg',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1Mcolors.jpeg/400px-1Mcolors.jpeg',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.jpeg',
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(jpg)',
+            'inline;filename*=UTF-8\'\'1Mcolors.jpeg'
+        )
+
+    def test_webm(self):
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webm',
+            'File:1Mcolors.jpg',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.jpg',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webm',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.jpg',
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(webm)',
+            'inline;filename*=UTF-8\'\'1Mcolors.jpg.webm'
         )
 
     def test_meta(self):

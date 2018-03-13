@@ -29,6 +29,11 @@ from tornado.process import Subprocess
 
 from wikimedia_thumbor.shell_runner import ShellRunner
 from wikimedia_thumbor.logging import log_extra
+from wikimedia_thumbor.loader.swift import swift
+
+
+swiftconn = None
+swiftconn_private = None
 
 
 def should_run(url):  # pragma: no cover
@@ -47,6 +52,11 @@ def load(context, url, callback):
     return load_sync(context, url, callback)
 
 
+def get_swift_token(context):
+    url, token = swift(context).get_auth()
+    return token
+
+
 def load_sync(context, url, callback):
     # Disable storage of original. These lines are useful if
     # you want your Thumbor instance to store all originals persistently
@@ -57,16 +67,25 @@ def load_sync(context, url, callback):
 
     normalized_url = _normalize_url(url)
 
-    command = ShellRunner.wrap_command([
+    command = [
         context.config.FFPROBE_PATH,
         '-v',
         'error',
         '-show_entries',
         'format=duration',
         '-of',
-        'default=noprint_wrappers=1:nokey=1',
-        '%s' % normalized_url
-    ], context)
+        'default=noprint_wrappers=1:nokey=1'
+    ]
+
+    if hasattr(context.config, 'SWIFT_HOST'):
+        command += [
+            '-headers',
+            'X-Auth-Token: %s' % get_swift_token(context),
+        ]
+
+    command += ['%s' % normalized_url]
+
+    command = ShellRunner.wrap_command(command, context)
 
     logger.debug('[Video] load_sync: %r' % command)
 
@@ -151,12 +170,21 @@ def _parse_time(context, normalized_url, callback, output):
 def seek_and_screenshot(callback, context, normalized_url, seek):
     output_file = NamedTemporaryFile(delete=False)
 
-    command = ShellRunner.wrap_command([
+    command = [
         context.config.FFMPEG_PATH,
-        # Order is important, for fast seeking -ss has to come before -i
+        # Order is important, for fast seeking -ss and -headers have to be before -i
         # As explained on https://trac.ffmpeg.org/wiki/Seeking
         '-ss',
-        '%d' % seek,
+        '%d' % seek
+    ]
+
+    if hasattr(context.config, 'SWIFT_HOST'):
+        command += [
+            '-headers',
+            'X-Auth-Token: %s' % get_swift_token(context)
+        ]
+
+    command += [
         '-i',
         '%s' % normalized_url,
         '-y',
@@ -169,7 +197,9 @@ def seek_and_screenshot(callback, context, normalized_url, seek):
         '-loglevel',
         'fatal',
         output_file.name
-    ], context)
+    ]
+
+    command = ShellRunner.wrap_command(command, context)
 
     logger.debug('[Video] _parse_time: %r' % command)
 
