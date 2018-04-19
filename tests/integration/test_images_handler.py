@@ -266,18 +266,42 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
             'inline;filename*=UTF-8\'\'1Mcolors.jpeg'
         )
 
-    def test_webm(self):
+    def test_webp(self):
         self.run_and_check_headers(
-            '/wikipedia/en/thumb/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webm',
+            '/wikipedia/en/thumb/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webp',
             'File:1Mcolors.jpg',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.jpg',
             'wikipedia-en-local-thumb.d3',
-            'thumbor/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webm',
+            'thumbor/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webp',
             '400',
             'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.jpg',
-            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(webm)',
-            'inline;filename*=UTF-8\'\'1Mcolors.jpg.webm'
+            'conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(webp)',
+            'inline;filename*=UTF-8\'\'1Mcolors.jpg.webp'
+        )
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png.webp',
+            'File:1Mcolors.png',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.png',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1Mcolors.png/400px-1Mcolors.png.webp',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.png',
+            'format(webp)',
+            'inline;filename*=UTF-8\'\'1Mcolors.png.webp'
+        )
+        self.run_and_check_headers(
+            '/wikipedia/en/thumb/d/d3/1Mcolors.pdf/400px-1Mcolors.pdf.jpg.webp',
+            'File:1Mcolors.pdf',
+            'wikipedia-en-local-public.d3',
+            'd/d3/1Mcolors.pdf',
+            'wikipedia-en-local-thumb.d3',
+            'thumbor/d/d3/1Mcolors.pdf/400px-1Mcolors.pdf.jpg.webp',
+            '400',
+            'http://swifthost/swift/v1/api/path/wikipedia-en-local-public.d3/d/d3/1Mcolors.pdf',
+            'format(webp)',
+            'inline;filename*=UTF-8\'\'1Mcolors.pdf.webp'
         )
 
     def test_meta(self):

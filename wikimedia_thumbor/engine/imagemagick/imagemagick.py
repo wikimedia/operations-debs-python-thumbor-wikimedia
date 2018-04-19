@@ -21,6 +21,7 @@ from thumbor.engines import BaseEngine
 from wikimedia_thumbor.shell_runner import ShellRunner
 from wikimedia_thumbor.exiftool_runner import ExiftoolRunner
 from wikimedia_thumbor.logging import log_extra
+from decimal import Decimal, ROUND_HALF_DOWN
 
 
 class ImageMagickException(Exception):
@@ -86,14 +87,19 @@ class Engine(BaseEngine):
             if self.exif['Pyexiv2Orientation'] in (6, 8):
                 buffer_ratio = buffer_size[1] / buffer_size[0]
 
-        width = float(self.context.request.width)
-        height = float(self.context.request.height)
+        # If the JPEG size hint is too close to the target size,
+        # We can end up with rounding errors on the final output size,
+        # with width being different than the requested width.
+        # Therefore, we make the hint twice the target size
+
+        width = float(self.context.request.width) * 2.0
+        height = float(self.context.request.height) * 2.0
 
         if width == 0:
-            width = round(height * buffer_ratio, 0)
+            width = Decimal(height * buffer_ratio).quantize(0, ROUND_HALF_DOWN)
 
         if height == 0:
-            height = round(width / buffer_ratio, 0)
+            height = Decimal(width / buffer_ratio).quantize(0, ROUND_HALF_DOWN)
 
         jpeg_size = '%dx%d' % (width, height)
         self.debug('[IM] jpeg:size hint: %r' % jpeg_size)
@@ -103,7 +109,8 @@ class Engine(BaseEngine):
         fields = [
             'ImageSize',
             'ProfileDescription',
-            'ColorType'
+            'ColorType',
+            'FileType'
         ]
 
         fields += self.context.config.EXIF_FIELDS_TO_KEEP
@@ -137,8 +144,8 @@ class Engine(BaseEngine):
             self.debug('[IM] Could not read EXIF with pyexiv2')
 
         stdout = Engine.exiftool.command(
-            pre=command,
             context=self.context,
+            pre=command,
             input_temp_file=input_temp_file
         )
 
@@ -151,7 +158,8 @@ class Engine(BaseEngine):
         if 'ImageSize' in self.exif:
             self.internal_size = map(int, self.exif['ImageSize'].split('x'))
         else:
-            self.internal_size = (1, 1)
+            # Have not been able to find a test file where that EXIF field comes up unpopulated
+            self.internal_size = (1, 1)  # pragma: no cover
 
         # If we encounter any non-sRGB ICC profile, we save it to re-apply
         # it to the result
@@ -177,8 +185,8 @@ class Engine(BaseEngine):
         ]
 
         self.icc_profile_saved = Engine.exiftool.command(
-            pre=command,
             context=self.context,
+            pre=command,
             input_temp_file=input_temp_file
         )
 
@@ -230,21 +238,42 @@ class Engine(BaseEngine):
 
         return stdout
 
-    def read(self, extension=None, quality=None):
-        self.debug('[IM] read: %r %r' % (extension, quality))
-
+    def process_read_parameters(self, extension, quality):
         extension = extension.lstrip('.')
+        original_quality = quality
 
-        config = self.context.config
+        if extension == 'webp':
+            lossless = ('FileType' in self.exif and self.exif['FileType'] in ['SVG', 'PNG'])
+
+            # We need to use a JPG as an intermediary for WebP conversion in order to
+            # be able to apply the EXIF filtering
+            if 'FileType' in self.exif and self.exif['FileType'] == 'JPEG':
+                extension = 'jpg'
+                quality = 100
+            else:
+                extension = 'png32'
+
+            self.webp = {'quality': original_quality, 'lossless': lossless}
+        else:
+            self.webp = False
 
         # -quality in ImageMagick has a different meaning for PNG
         # See https://www.imagemagick.org/script/command-line-options.php#quality
-        if extension == 'png':
-            quality = '95'
+        if extension.startswith('png'):
+            quality = 95
+
+        return extension, quality
+
+    def read(self, extension=None, quality=None):
+        self.debug('[IM] read: %s %d' % (extension, quality))
+
+        extension, quality = self.process_read_parameters(extension, quality)
+
+        config = self.context.config
 
         operators = [
             '-quality',
-            '%s' % quality
+            '%d' % quality
         ]
 
         if hasattr(config, 'CHROMA_SUBSAMPLING') and config.CHROMA_SUBSAMPLING:
@@ -255,7 +284,7 @@ class Engine(BaseEngine):
                 cs
             ]
 
-        self.debug('[IM] Generating image with quality %r' % quality)
+        self.debug('[IM] Generating image with quality %d' % quality)
 
         if extension == 'jpg' and self.context.config.PROGRESSIVE_JPEG:
             operators += [
@@ -287,8 +316,9 @@ class Engine(BaseEngine):
             if self.is_valid_thumbnail(result):
                 self.debug('[IM] errored but still rendered: %s' % stderr)
             else:
-                ShellRunner.rm_f(self.image.name)
-                raise ImageMagickException('Failed to convert image %s' % stderr)
+                # Haven't been able to find a test file that meets this criteria
+                ShellRunner.rm_f(self.image.name)  # pragma: no cover
+                raise ImageMagickException('Failed to convert image %s' % stderr)  # pragma: no cover
 
         self.operators = []
 
@@ -298,6 +328,9 @@ class Engine(BaseEngine):
 
         if extension == 'jpg':
             result = self.process_exif(result)
+
+        if hasattr(self, 'webp') and self.webp:
+            result = self.convert_to_webp(result)
 
         ShellRunner.rm_f(self.image.name)
 
@@ -339,14 +372,40 @@ class Engine(BaseEngine):
             operators += [
                 '-define',
                 'jpeg:size=%s' % self.jpeg_size(),
-                '-resize',
-                self.jpeg_size()
             ]
+
+        exif_image_size = self.exif['ImageSize']
+        buffer_size = exif_image_size.split('x')
+        buffer_size = [float(x) for x in buffer_size]
+        buffer_ratio = buffer_size[0] / buffer_size[1]
+
+        if 'Pyexiv2Orientation'in self.exif:
+            if self.exif['Pyexiv2Orientation'] in (6, 8):
+                buffer_ratio = buffer_size[1] / buffer_size[0]
+
+        # We have a slightly different calculation/rounding strategy than Thumbor
+        # when it comes to calculate target width/height when only one dimension
+        # is provided
+        if self.context.request.height == 0 and self.context.request.width > 0:
+            target_size = '%dx%d' % (int(width), Decimal(width / buffer_ratio).quantize(0, ROUND_HALF_DOWN))
+        elif self.context.request.height > 0 and self.context.request.width == 0:
+            target_size = '%dx%d' % (Decimal(height * buffer_ratio).quantize(0, ROUND_HALF_DOWN), int(height))
         else:
-            operators += [
-                '-resize',
-                '%dx%d' % (int(width), int(height))
-            ]
+            target_size = '%dx%d' % (int(width), int(height))
+
+        # The ^ + gravity + extent trick is necessary to ensure that we get a thumbnail
+        # of exactly the width we've requested. In some edge cases a tiny fraction
+        # of the image might be cropped out. This is unavoidable with ImageMagick
+        # See http://www.imagemagick.org/Usage/resize/ for details
+
+        operators += [
+            '-resize',
+            '%s^' % target_size,
+            '-gravity',
+            'center',
+            '-extent',
+            target_size
+        ]
 
         self.queue_operators(operators)
 
@@ -379,61 +438,6 @@ class Engine(BaseEngine):
             elif self.exif['Pyexiv2Orientation'] == 3:
                 self.queue_operators(['-rotate', '180'])
 
-    def image_data_as_rgb(self, update_image=True):
-        self.debug('[IM] image_data_as_rgb: %r' % update_image)
-
-        operators = [
-            '%s[%d]' % (self.image.name, self.page),
-            '%s:-' % self.mode
-        ]
-
-        returncode, stderr, converted = self.run_operators(operators)
-
-        # If the requested page failed, try the cover
-        if returncode != 0 and self.page > 0:
-            self.page = 0
-            operators = [
-                '%s[%d]' % (self.image.name, self.page),
-                '%s:-' % self.mode
-            ]
-            returncode, stderr, converted = self.run_operators(operators)
-
-        if returncode != 0:
-            # T179200 ImageMagick may return a non-zero exit code while having
-            # actually rendered a thumbnail of a semi-broken file
-            if self.is_valid_thumbnail(converted):
-                self.debug('[IM] errored but still rendered: %s' % stderr)
-            else:
-                ShellRunner.rm_f(self.image.name)
-                raise ImageMagickException('Failed to convert image to %s: %s' % (self.mode, stderr))
-
-        self.operators = []
-
-        # Going forward, we're dealing with a single page document
-        if self.page > 0:
-            self.page = 0
-
-        if update_image:
-            with open(self.image.name, 'w') as f:
-                f.write(converted)
-
-        ShellRunner.rm_f(self.image.name)
-
-        return self.mode, converted
-
-    def set_image_data(self, data):
-        self.debug('[IM] set_image_data')
-
-        with open(self.image.name, 'w') as f:
-            f.write(data)
-
-    @property
-    def mode(self):
-        if 'ColorType' in self.exif and self.exif['ColorType'] == 'RGB with Alpha':
-            return 'RGBA'
-
-        return 'RGB'
-
     @property
     def size(self):
         return self.internal_size
@@ -454,23 +458,55 @@ class Engine(BaseEngine):
 
         command += extra_operators
 
-        returncode, stderr, stdout = ShellRunner.command(
+        returncode, stderr, result = ShellRunner.command(
             command,
-            self.context,
+            self.context
         )
 
-        return returncode, stderr, stdout
+        return returncode, stderr, result
+
+    def convert_to_webp(self, result):
+        temp_file = NamedTemporaryFile(delete=False)
+
+        with open(temp_file.name, 'w') as tmp:
+            tmp.write(result)
+
+        command = [
+            self.context.config.CWEBP_PATH,
+            temp_file.name,
+            '-metadata',
+            'all'
+        ]
+
+        if self.webp['lossless']:
+            # for webp >= 0.5 (Debian Stretch) -exact might be a desirable option to add
+            # https://github.com/webmproject/libwebp/commit/1f9be97c22d991816cd72a9d83569d15dcf75965
+            command += ['-lossless']
+        else:
+            command += ['-q', '%s' % self.webp['quality']]
+
+        self.webp = False
+
+        command += [
+            '-quiet',
+            '-o',
+            '-'
+        ]
+
+        returncode, stderr, result = ShellRunner.command(command,  self.context)
+
+        ShellRunner.rm_f(temp_file.name)
+
+        return result
 
     def debug(self, message):
         logger.debug(message, extra=log_extra(self.context))
 
-    def is_valid_thumbnail(self, contents):
-        if len(contents) == 0:
-            return False
-
+    def is_valid_thumbnail(self, result):
         temp_file = NamedTemporaryFile(delete=False)
-        temp_file.write(contents)
-        temp_file.close()
+
+        with open(temp_file.name, 'wb') as f:
+            f.write(result)
 
         command = [
             self.context.config.CONVERT_PATH,

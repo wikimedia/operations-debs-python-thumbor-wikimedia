@@ -31,9 +31,9 @@ class ExiftoolRunner:
     @classmethod
     def command(
         cls,
+        context,
         pre=[],
         post=[],
-        context=None,
         buffer='',
         input_temp_file=None
     ):
@@ -47,19 +47,13 @@ class ExiftoolRunner:
         command.append(input_temp_file.name)
         command += post
 
-        if context:
-            logger.debug('[ExiftoolRunner] command: %r' % command, extra=log_extra(context))
-        else:
-            logger.debug('[ExiftoolRunner] command: %r' % command)
+        logger.debug('[ExiftoolRunner] command: %r' % command, extra=log_extra(context))
 
         code, stderr, stdout = ShellRunner.command(command, context)
 
         input_temp_file.close()
 
         if stderr:
-            if context:
-                logger.error('[ExiftoolRunner] error: %r' % stderr, extra=log_extra(context))
-            else:
-                logger.error('[ExiftoolRunner] error: %r' % stderr)
+            logger.error('[ExiftoolRunner] error: %r' % stderr, extra=log_extra(context))
 
         return stdout

@@ -33,6 +33,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.LOADER = 'wikimedia_thumbor.loader.file'
 
         cfg.LOADER_EXCERPT_LENGTH = 4096
+        cfg.HTTP_LOADER_REQUEST_TIMEOUT = 60
         cfg.HTTP_LOADER_TEMP_FILE_TIMEOUT = 20
 
         cfg.FILE_LOADER_ROOT_PATH = os.path.join(
@@ -53,6 +54,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.THREED2PNG_PATH = which('3d2png.js')
         cfg.XVFB_RUN_PATH = which('xvfb-run')
         cfg.CONVERT_PATH = which('convert')
+        cfg.CWEBP_PATH = which('cwebp')
         timeout = which(
             'gtimeout' if platform.system() == 'Darwin' else 'timeout'
         )
@@ -121,22 +123,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
 
         return application
 
-    def run_and_check_ssim_and_size(
-        self,
-        url,
-        expected,
-        expected_ssim,
-        size_tolerance
-    ):
-        """Request URL and check ssim and size.
-
-        Arguments:
-        url -- thumbnail URL
-        expected -- reference thumbnail file
-        expected_ssim -- minimum SSIM score
-        size_tolerance -- maximum file size ratio between reference and result
-        exif_fields -- expected EXIF field values
-        """
+    def fetch(self, url):
         try:
             result = self.retrieve("/%s" % url)
         except Exception as e:
@@ -145,32 +132,63 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         assert result is not None, 'No result'
         assert result.code == 200, 'Response code: %s' % result.code
 
-        generated = Image.open(result.buffer)
+        return result.buffer
+
+    def run_and_check_ssim_and_size(
+        self,
+        url,
+        mediawiki_reference_thumbnail,
+        perfect_reference_thumbnail,
+        expected_width,
+        expected_height,
+        expected_ssim,
+        size_tolerance,
+    ):
+        """Request URL and check ssim and size.
+
+        Arguments:
+        url -- thumbnail URL
+        mediawiki_reference_thumbnail -- reference thumbnail file
+        expected_width -- expected thumbnail width
+        expected_height -- expected thumbnail height
+        expected_ssim -- minimum SSIM score
+        size_tolerance -- maximum file size ratio between reference and result
+        perfect_reference_thumbnail -- perfect lossless version of the target thumbnail, for visual comparison
+        """
+        result = self.fetch(url)
+
+        result.seek(0)
+
+        generated = Image.open(result)
 
         expected_path = os.path.join(
             os.path.dirname(__file__),
             'thumbnails',
-            expected
+            mediawiki_reference_thumbnail
         )
-        expected = Image.open(expected_path).convert(generated.mode)
 
-        heights = (generated.size[1], expected.size[1])
-        assert abs(generated.size[1] - expected.size[1]) <= 1, \
-            'Height differs too much: %d (generated) %d (expected)\n' % heights
+        visual_expected_path = os.path.join(
+            os.path.dirname(__file__),
+            'thumbnails',
+            perfect_reference_thumbnail
+        )
+        visual_expected = Image.open(visual_expected_path).convert(generated.mode)
 
-        widths = (generated.size[0], expected.size[0])
-        assert abs(generated.size[0] - expected.size[0]) <= 1, \
-            'Width differs too much: %d (generated) %d (expected)\n' % widths
+        assert generated.size[0] == expected_width, \
+            'Width differs: %d (should be == %d)\n' % (generated.size[0], expected_width)
 
-        ssim = compute_ssim(generated, expected)
+        assert generated.size[1] == expected_height, \
+            'Height differs: %d (should be == %d)\n' % (generated.size[1], expected_height)
 
-        assert ssim >= expected_ssim, 'Images too dissimilar: %f\n' % ssim
+        ssim = compute_ssim(generated, visual_expected)
 
-        expected_filesize = os.path.getsize(expected_path)
-        generated_filesize = len(result.buffer.getvalue())
+        assert ssim >= expected_ssim, 'Images too dissimilar: %f (should be >= %f)\n' % (ssim, expected_ssim)
 
-        sizes = (generated_filesize, expected_filesize)
-        assert generated_filesize <= expected_filesize * size_tolerance, \
-            'Generated file bigger than size tolerance: %d generated vs %d expected' % sizes
+        expected_filesize = float(os.path.getsize(expected_path))
+        generated_filesize = float(len(result.getvalue()))
 
-        return generated
+        ratio = generated_filesize / expected_filesize
+        assert ratio <= size_tolerance, \
+            'Generated file bigger than size tolerance: %f (should be <= %f)' % (ratio, size_tolerance)
+
+        return result

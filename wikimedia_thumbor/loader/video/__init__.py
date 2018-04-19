@@ -193,6 +193,8 @@ def seek_and_screenshot(callback, context, normalized_url, seek):
         '-an',
         '-f',
         'image2',
+        '-vf',
+        'scale=iw*sar:ih',  # T198043 apply any codec-specific aspect ratio
         '-nostats',
         '-loglevel',
         'fatal',

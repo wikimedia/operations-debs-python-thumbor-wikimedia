@@ -99,10 +99,11 @@ class ShellRunner:
         simple_command_name = os.path.basename(command[0])
         simple_command_name = re.sub(r'[^a-zA-Z0-9-]', r'', simple_command_name)
 
-        context.request_handler.add_header(
-            'Thumbor-%s-Time' % simple_command_name,
-            int(round(duration))
-        )
+        if context.request_handler is not None:
+            context.request_handler.add_header(
+                'Thumbor-%s-Time' % simple_command_name,
+                int(round(duration))
+            )
 
         return proc.returncode, stderr, stdout
 

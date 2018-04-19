@@ -12,8 +12,11 @@ class WikimediaHugeVideoTest(WikimediaTestCase):
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/320x/filters:page(82)/https://upload.wikimedia.org/wikipedia/commons/a/ab/Borsch_01.webm',
             '320px-seek=0-Borsch_01.webm.jpg',
-            0.98,
-            1.0
+            '320px-seek=0-Borsch_01.webm.png',
+            320,
+            180,
+            0.96,
+            0.93
         )
 
     def test_404(self):

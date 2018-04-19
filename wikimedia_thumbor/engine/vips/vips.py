@@ -69,12 +69,6 @@ class Engine(BaseWikimediaEngine):
 
         return False
 
-    def target_format(self):
-        if self.context.request.format:
-            return '.%s' % self.context.request.format
-
-        return self.context.request.extension
-
     def create_image(self, buffer):
         # If there is no extension in the request, it means that we
         # are serving a cached result. In which case no VIPS processing
@@ -82,16 +76,16 @@ class Engine(BaseWikimediaEngine):
         if not hasattr(self.context.request, 'extension'):
             return super(Engine, self).create_image(buffer)
 
-        shrink_factor = int(math.floor(
+        # We shrink to roughly twice the size we need, then the rest of the resizing is done
+        # by Imagemagick. We can't resize straight to the size we need since the shrink factor
+        # in this version of VIPS is an integer
+        shrink_factor = max(1, int(math.floor(
             float(self.context.vips['width'])
             /
-            float(self.context.request.width)
-        ))
+            (2.0 * float(self.context.request.width))
+        )))
 
         result = self.shrink(buffer, shrink_factor)
-
-        self.extension = self.target_format()
-        self.debug('[VIPS] Setting extension to: %s' % self.extension)
 
         return super(Engine, self).create_image(result)
 
@@ -125,7 +119,7 @@ class Engine(BaseWikimediaEngine):
         temp_dir = mkdtemp()
         destination = os.path.join(
             temp_dir,
-            'vips_result%s' % self.target_format()
+            'vips_result.png'
         )
 
         command = [

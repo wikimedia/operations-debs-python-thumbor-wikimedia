@@ -52,6 +52,10 @@ class Engine(BaseWikimediaEngine):
             # ...and then there's 4 bytes that indicate how many triangles are
             # present in the file...
             triangles = stream.read(4)
+
+            if len(triangles) < 4:
+                return False
+
             triangles = struct.unpack("<L", triangles)[0]
 
             # ...so there should be exactly that number, times 386 (the number

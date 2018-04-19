@@ -1,16 +1,18 @@
+import json
 import os
-import PIL.ExifTags
+import shutil
+from PIL import Image
+from tempfile import NamedTemporaryFile
+from wikimedia_thumbor.exiftool_runner import ExiftoolRunner
+from wikimedia_thumbor.shell_runner import ShellRunner
 
 from . import WikimediaTestCase
 
 
 class WikimediaExifTest(WikimediaTestCase):
-    def run_and_check_ssim_size_and_exif(
+    def run_and_check_exif(
         self,
         url,
-        expected,
-        expected_ssim,
-        size_tolerance,
         expected_exif_fields,
         expected_icc_profile
     ):
@@ -18,46 +20,45 @@ class WikimediaExifTest(WikimediaTestCase):
 
         Arguments:
         url -- thumbnail URL
-        expected -- reference thumbnail file
-        expected_ssim -- minimum SSIM score
-        size_tolerance -- maximum file size ratio between reference and result
         expected_exif_fields -- expected EXIF field values
         expected_icc_profile -- expected ICC profile
         """
-        result = super(WikimediaExifTest, self).run_and_check_ssim_and_size(
-            url,
-            expected,
-            expected_ssim,
-            size_tolerance
-        )
+        result_buffer = self.fetch(url)
+
+        result = Image.open(result_buffer)
 
         if expected_exif_fields:
-            self.check_exif(result, expected_exif_fields)
+            self.check_exif(result_buffer, expected_exif_fields)
 
         if expected_icc_profile:
             assert result.info['icc_profile'] == expected_icc_profile, \
                 'ICC profile: %s' % result.info['icc_profile']
 
-    def check_exif(self, image, exif_fields):
-        exif = {
-            PIL.ExifTags.TAGS[k]: v
-            for k, v in image._getexif().items()
-            if k in PIL.ExifTags.TAGS
-        }
+    def check_exif(self, result_buffer, expected):
+        temp_file = NamedTemporaryFile(delete=False)
 
-        for field in exif_fields:
-            reference = exif_fields[field]
-            result = exif[field]
-            assert result == reference, \
-                'EXIF field %s: %s' % (field, result)
+        result_buffer.seek(0)
+        with open(temp_file.name, 'wb') as f:
+            shutil.copyfileobj(result_buffer, f)
+
+        exiftool_args = ['-json', '-sort']
+        exiftool_args += ['-' + s for s in list(expected.keys())]
+
+        stdout = ExiftoolRunner().command(
+            pre=exiftool_args,
+            context=self.ctx,
+            input_temp_file=temp_file
+        )
+
+        ShellRunner.rm_f(temp_file.name)
+
+        found = json.loads(stdout)[0]
+        del found['SourceFile']
+
+        assert found == expected, 'EXIF fields mismatch. Expected: %r Found: %r' % (expected, found)
 
     def test_adobe_rgb(self):
-        self.run_and_check_ssim_size_and_exif(
-            'thumbor/unsafe/300x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/Physical_map_tagged_AdobeRGB.jpg',
-            '300px-Physical_map_tagged_AdobeRGB.jpg',
-            0.97,
-            1.0,
-            None,
+        adobe_rgb = (
             '\x00\x00\x02HADBE\x02\x10\x00\x00mntrRGB XYZ \x07\xcf\x00\x06\x00'
             + '\x03\x00\x00\x00\x00\x00\x00acspMSFT\x00\x00\x00\x00none\x00'
             + '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'
@@ -89,71 +90,35 @@ class WikimediaExifTest(WikimediaTestCase):
             + '\xbe\x9c'
         )
 
+        self.run_and_check_exif(
+            'thumbor/unsafe/300x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/Physical_map_tagged_AdobeRGB.jpg',
+            None,
+            adobe_rgb
+        )
+        self.run_and_check_exif(
+            'thumbor/unsafe/300x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(webp)/Physical_map_tagged_AdobeRGB.jpg',
+            None,
+            adobe_rgb
+        )
+
     def test_exif_filtering(self):
-        self.run_and_check_ssim_size_and_exif(
+        # Note that exiftool is too crude for us to test that cruft is removed by the filtering
+        # and this test only verified that fields that ought to be maintained are. Cruft removal
+        # is indirectly tested by all the file size constraints on tests outputting JPG and WEBP.
+        self.run_and_check_exif(
             'thumbor/unsafe/800x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/Munich_subway_station_Westfriedhof.jpg',
-            '800px-Munich_subway_station_Westfriedhof.jpg',
-            0.95,
-            1.1,
             {
                 'Artist': 'Martin Falbisoner',
-                'Copyright': 'some rights reserved'
+                'Copyright': 'some rights reserved',
             },
             None
         )
-
-    def test_exif_orientation(self):
-        self.run_and_check_ssim_size_and_exif(
-            'thumbor/unsafe/40x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/EXIF_rotation_180.jpg',
-            '40px-EXIF_rotation_180.jpg',
-            0.99,
-            1.1,
-            None,
-            None
-        )
-        self.run_and_check_ssim_size_and_exif(
-            ('thumbor/unsafe/337x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-                'Green_and_golden_Butterfly_copy.jpg'),
-            '337px-Green_and_golden_Butterfly_copy.jpg',
-            0.97,
-            1.0,
-            None,
-            None
-        )
-        self.run_and_check_ssim_size_and_exif(
-            ('thumbor/unsafe/394x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-                'Rostockstein.jpg'),
-            '394px-Rostockstein.jpg',
-            0.92,
-            1.0,
-            None,
-            None
-        )
-        self.run_and_check_ssim_size_and_exif(
-            ('thumbor/unsafe/450x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-                'Carrie.jpg'),
-            '450px-Carrie.jpg',
-            0.96,
-            1.0,
-            None,
-            None
-        )
-        self.run_and_check_ssim_size_and_exif(
-            ('thumbor/unsafe/447x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-                'Cerkiew.jpg'),
-            '447px-Cerkiew.jpg',
-            0.91,
-            1.0,
-            None,
-            None
-        )
-        self.run_and_check_ssim_size_and_exif(
-            ('thumbor/unsafe/337x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
-                'Tower.jpg'),
-            '337px-Tower.jpg',
-            0.94,
-            1.0,
-            None,
+        self.run_and_check_exif(
+            'thumbor/unsafe/800x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(webp)/Munich_subway_station_Westfriedhof.jpg',
+            {
+                'Artist': 'Martin Falbisoner',
+                'Copyright': 'some rights reserved',
+            },
             None
         )
 
@@ -165,11 +130,13 @@ class WikimediaExifTest(WikimediaTestCase):
         with open(tinyrgb_path, 'r') as tinyrgb_file:
             tinyrgb = tinyrgb_file.read()
 
-        self.run_and_check_ssim_size_and_exif(
+        self.run_and_check_exif(
             'thumbor/unsafe/400x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/Christophe_Henner_-_June_2016.JPG',
-            '400px-Christophe_Henner_-_June_2016.jpg',
-            0.98,
-            1.0,
+            None,
+            tinyrgb
+        )
+        self.run_and_check_exif(
+            'thumbor/unsafe/400x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85):format(webp)/Christophe_Henner_-_June_2016.JPG',
             None,
             tinyrgb
         )

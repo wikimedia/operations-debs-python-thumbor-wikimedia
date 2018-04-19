@@ -84,16 +84,20 @@ class Storage(BaseStorage):
             # computing the xkey in Varnish. It always comes from Thumbor.
             headers = None
             xkey = self.context.request_handler._headers.get_list('xkey')
+            content_type = self.context.request_handler._headers.get_list('content-type')
 
             if len(xkey):
                 headers = {'xkey': xkey[0]}
+
+            content_type = content_type[0] if len(content_type) else None
 
             start = datetime.datetime.now()
             self.swift.put_object(
                 self.context.wikimedia_thumbnail_container,
                 self.context.wikimedia_thumbnail_save_path,
                 bytes,
-                headers=headers
+                headers=headers,
+                content_type=content_type
             )
             record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.write.success')
 
