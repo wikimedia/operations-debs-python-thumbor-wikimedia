@@ -407,6 +407,11 @@ class Engine(BaseEngine):
             target_size
         ]
 
+        # T198370 "-background none" is necessary to preserve transparency of PNG thumbnails
+        # on the Debian Jessie version of IM (6.8.9-9)
+        if 'ColorType' in self.exif and self.exif['ColorType'] == 'RGB with Alpha':
+            operators += ['-background', 'none']
+
         self.queue_operators(operators)
 
     def flip_horizontally(self):

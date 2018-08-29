@@ -51,7 +51,7 @@ class WikimediaTest(WikimediaTestCase):
             '400px-PNG_transparency_demonstration_1.png',
             400,
             300,
-            0.70,
+            0.97,
             1.1
         )
         self.run_and_check_ssim_and_size(
