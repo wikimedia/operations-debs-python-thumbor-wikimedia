@@ -121,6 +121,15 @@ class WikimediaExifTest(WikimediaTestCase):
             },
             None
         )
+        self.run_and_check_exif(
+            'thumbor/unsafe/800x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/The_Poppet.jpg',
+            {
+                'Artist': 'wikimedia \'Batternut\'',
+                'Copyright': '(c) 2015 wikimedia \'Batternut\'',
+                'ImageDescription': 'charset="Ascii" 1950s baby bath The Poppet with water and ducks',
+            },
+            None
+        )
 
     def test_tinyrgb_substitution(self):
         tinyrgb_path = os.path.join(

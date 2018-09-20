@@ -67,3 +67,18 @@ class WikimediaTest(WikimediaTestCase):
             0.23,
             0.68
         )
+        # Palette PNG
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/400x/' +
+            'Cincinnati_Bell_logo.png',
+            '400px-Cincinnati_Bell_logo.png',
+            '400px-Cincinnati_Bell_logo.png',
+            400,
+            86,
+            # Likely due to differences compressing the transparency layer between IM versions
+            0.75,
+            # The thumbnail is bigger because ImageMagick either messes with the palette if we ask it
+            # to generate a palette PNG via the PNG8 output, making the image ugly and aliased (but small)
+            # or, as it does automatically here, converts the output to an RGBA image and conserves fidelity
+            1.13
+        )

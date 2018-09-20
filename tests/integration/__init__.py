@@ -75,7 +75,7 @@ class WikimediaTestCase(AsyncHTTPTestCase):
             'wikimedia_thumbor.handler.core'
         ]
 
-        cfg.EXIF_FIELDS_TO_KEEP = ['Artist', 'Copyright', 'Description']
+        cfg.EXIF_FIELDS_TO_KEEP = ['Artist', 'Copyright', 'ImageDescription']
         cfg.EXIF_TINYRGB_PATH = os.path.join(
             os.path.dirname(__file__),
             'tinyrgb.icc'

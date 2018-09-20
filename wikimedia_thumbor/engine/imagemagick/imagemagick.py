@@ -408,8 +408,10 @@ class Engine(BaseEngine):
         ]
 
         # T198370 "-background none" is necessary to preserve transparency of PNG thumbnails
-        # on the Debian Jessie version of IM (6.8.9-9)
-        if 'ColorType' in self.exif and self.exif['ColorType'] == 'RGB with Alpha':
+        # on the Debian Jessie version of IM (6.8.9-9). Only apply to RGBA and Palette (indexed)
+        # PNGs, because otherwise it would turn thumbnails of RGB PNGs into RGBA, thumbnails
+        # increasing their file size significantly.
+        if 'ColorType' in self.exif and self.exif['ColorType'] in ['RGB with Alpha', 'Palette']:
             operators += ['-background', 'none']
 
         self.queue_operators(operators)
