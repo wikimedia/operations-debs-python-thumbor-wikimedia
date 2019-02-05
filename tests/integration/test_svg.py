@@ -1,4 +1,9 @@
+import platform
 from . import WikimediaTestCase
+
+
+distname, distversion, distid = platform.linux_distribution()
+distversion = float(distversion)
 
 
 class WikimediaTest(WikimediaTestCase):
@@ -39,7 +44,7 @@ class WikimediaTest(WikimediaTestCase):
             # WebP compresses the alpha layer more agressively by default, which results in this
             # low score. This can be avoided in webp >= 0.5 with the -exact function, currently
             # only available on Debian Stretch.
-            0.81,
+            0.99 if distname == 'debian' and distversion >= 9 else 0.81,
             0.66
         )
         self.run_and_check_ssim_and_size(
@@ -150,6 +155,6 @@ class WikimediaTest(WikimediaTestCase):
             # WebP compresses the alpha layer more agressively by default, which results in this
             # low score. This can be avoided in webp >= 0.5 with the -exact function, currently
             # only available on Debian Stretch.
-            0.63,
+            0.99 if distname == 'debian' and distversion >= 9 else 0.63,
             0.67
         )

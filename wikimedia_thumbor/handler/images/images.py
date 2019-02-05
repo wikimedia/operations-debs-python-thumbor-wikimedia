@@ -217,6 +217,8 @@ class ImagesHandler(ImagingHandler):
         original_shard2 = kw['shard2']
         thumbnail_shard2 = kw['shard2']
 
+        self.context.private = original_container in private_containers
+
         # Temp is different from any other case. Originals are thumbnails are
         # stored alongside each other in the same container. The hash prefix
         # is different for thumbnails and originals. Thumbnails stick to the
@@ -235,7 +237,11 @@ class ImagesHandler(ImagingHandler):
                 original_shard1 = hashed[:1]
                 original_shard2 = hashed[:2]
 
-        self.context.private = original_container in private_containers
+            # temp containers are considered private, only the uploader can
+            # access the temp contents, via MediaWiki. See setZoneAccess.php
+            # in MediaWiki's codebase for the logic that sets the privacy level
+            # of Swift containers.
+            self.context.private = True
 
         if original_container in sharded_containers:
             original_container += '.' + original_shard2

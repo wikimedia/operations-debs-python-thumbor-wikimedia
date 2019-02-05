@@ -12,6 +12,7 @@
 # ImageMagick engine
 
 import logging
+import platform
 from tempfile import NamedTemporaryFile
 from pyexiv2 import ImageMetadata
 
@@ -110,7 +111,8 @@ class Engine(BaseEngine):
             'ImageSize',
             'ProfileDescription',
             'ColorType',
-            'FileType'
+            'FileType',
+            'Transparency'
         ]
 
         fields += self.context.config.EXIF_FIELDS_TO_KEEP
@@ -411,7 +413,9 @@ class Engine(BaseEngine):
         # on the Debian Jessie version of IM (6.8.9-9). Only apply to RGBA and Palette (indexed)
         # PNGs, because otherwise it would turn thumbnails of RGB PNGs into RGBA, thumbnails
         # increasing their file size significantly.
-        if 'ColorType' in self.exif and self.exif['ColorType'] in ['RGB with Alpha', 'Palette']:
+        if ('ColorType' in self.exif
+            and self.exif['ColorType'] in ['RGB with Alpha', 'Grayscale with Alpha', 'Palette']) \
+            or 'Transparency' in self.exif:
             operators += ['-background', 'none']
 
         self.queue_operators(operators)
@@ -486,9 +490,12 @@ class Engine(BaseEngine):
         ]
 
         if self.webp['lossless']:
-            # for webp >= 0.5 (Debian Stretch) -exact might be a desirable option to add
-            # https://github.com/webmproject/libwebp/commit/1f9be97c22d991816cd72a9d83569d15dcf75965
-            command += ['-lossless']
+            # The -exact option was introduced in webp 0.5, which is only available on Stretch
+            distname, distversion, distid = platform.linux_distribution()
+            if distname == 'debian' and float(distversion) >= 9:
+                command += ['-lossless', '-exact']
+            else:
+                command += ['-lossless']
         else:
             command += ['-q', '%s' % self.webp['quality']]
 
