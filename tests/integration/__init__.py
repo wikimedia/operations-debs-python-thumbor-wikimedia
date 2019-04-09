@@ -21,8 +21,8 @@ class WikimediaTestCase(AsyncHTTPTestCase):
     def get_new_ioloop(self):
         return IOLoop.instance()
 
-    def retrieve(self, url):
-        request = HTTPRequest(url=self.get_url(url), request_timeout=60)
+    def retrieve(self, url, headers=None):
+        request = HTTPRequest(url=self.get_url(url), headers=headers, request_timeout=60)
         self.http_client.fetch(request, self.stop)
         return self.wait(timeout=60)
 

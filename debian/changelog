@@ -1,3 +1,9 @@
+python-thumbor-wikimedia (2.4-1+deb9u1) stretch-wikimedia; urgency=low
+
+  * New upstream release
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Tue, 9 Apr 2019 15:56:00 +0000
+
 python-thumbor-wikimedia (2.3-1+deb9u1) stretch-wikimedia; urgency=low
 
   * New upstream release

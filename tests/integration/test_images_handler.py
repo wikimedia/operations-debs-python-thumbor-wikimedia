@@ -44,6 +44,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         cfg.SWIFT_PATH_PREFIX = 'thumbor/'
         cfg.SWIFT_CONNECTION_TIMEOUT = 1
         cfg.SWIFT_RETRIES = 0
+        cfg.SWIFT_PRIVATE_SECRET = 'topsecret1234'
 
         cfg.QUALITY_LOW = 10
         cfg.DEFAULT_FILTERS_JPEG = 'conditional_sharpen(0.0,0.8,1.0,0.0,0.85)'
@@ -53,6 +54,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def run_and_check_headers(
         self,
         url,
+        headers,
         expected_xkey,
         expected_original_container,
         expected_original_path,
@@ -77,7 +79,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         expected_filters -- expected thumbor filters
         expected_content_disposition -- expected content disposition
         """
-        response = self.retrieve(url)
+        response = self.retrieve(url, headers)
 
         try:
             xkey = response.headers.get_list('xkey')[0]
@@ -159,6 +161,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_png(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
+            None,
             'File:1Mcolors.png',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.png',
@@ -173,6 +176,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_qlow(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.jpg/qlow-400px-1Mcolors.jpg',
+            None,
             'File:1Mcolors.jpg',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.jpg',
@@ -187,6 +191,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_page(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.pdf/page3-400px-1Mcolors.pdf.jpg',
+            None,
             'File:1Mcolors.pdf',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.pdf',
@@ -201,6 +206,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_lang(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.svg/langfr-400px-1Mcolors.svg.png',
+            None,
             'File:1Mcolors.svg',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.svg',
@@ -213,6 +219,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         )
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.svg/langzh-hans-400px-1Mcolors.svg.png',
+            None,
             'File:1Mcolors.svg',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.svg',
@@ -227,6 +234,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_seek(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.webm/400px-seek=10-1Mcolors.webm.jpg',
+            None,
             'File:1Mcolors.webm',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.webm',
@@ -241,6 +249,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_jpe(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.jpe/400px-1Mcolors.jpe',
+            None,
             'File:1Mcolors.jpe',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.jpe',
@@ -255,6 +264,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_jpeg(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.jpeg/400px-1Mcolors.jpeg',
+            None,
             'File:1Mcolors.jpeg',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.jpeg',
@@ -269,6 +279,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_webp(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.jpg/400px-1Mcolors.jpg.webp',
+            None,
             'File:1Mcolors.jpg',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.jpg',
@@ -281,6 +292,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         )
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png.webp',
+            None,
             'File:1Mcolors.png',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.png',
@@ -293,6 +305,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         )
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.pdf/400px-1Mcolors.pdf.jpg.webp',
+            None,
             'File:1Mcolors.pdf',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.pdf',
@@ -307,6 +320,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_meta(self):
         self.run_and_check_headers(
             '/wikipedia/meta/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
+            None,
             'File:1Mcolors.png',
             'wikipedia-meta-local-public',
             'd/d3/1Mcolors.png',
@@ -321,6 +335,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_mediawiki(self):
         self.run_and_check_headers(
             '/wikipedia/mediawiki/thumb/d/d3/1Mcolors.png/400px-1Mcolors.png',
+            None,
             'File:1Mcolors.png',
             'wikipedia-mediawiki-local-public',
             'd/d3/1Mcolors.png',
@@ -335,6 +350,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_archive(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/archive/d/d3/20160729183014!1Mcolors.jpg/400px-1Mcolors.jpg',
+            None,
             'File:20160729183014!1Mcolors.jpg',
             'wikipedia-en-local-public.d3',
             'archive/d/d3/20160729183014!1Mcolors.jpg',
@@ -349,6 +365,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_lossless_tiff(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1Mcolors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            None,
             'File:1Mcolors.tif',
             'wikipedia-en-local-public.d3',
             'd/d3/1Mcolors.tif',
@@ -364,6 +381,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1M%0Acolors.tif/lossless-page1-400px-1Mcolors.tif.png',
             None,
+            None,
             'wikipedia-en-local-public.d3',
             None,
             'wikipedia-en-local-thumb.d3',
@@ -378,6 +396,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_question_mark_original(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/d/d3/1M%3Fcolors.tif/lossless-page1-400px-1Mcolors.tif.png',
+            None,
             'File:1M?colors.tif',
             'wikipedia-en-local-public.d3',
             'd/d3/1M?colors.tif',
@@ -392,6 +411,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_percentage_original(self):
         self.run_and_check_headers(
             '/wikipedia/commons/thumb/c/ce/Dramatische_daling_insectenpopulatie%2C_75%25_is_verdwenen.webm/800px--Dramatische_daling_insectenpopulatie%2C_75%25_is_verdwenen.webm.jpg',
+            None,
             'File:Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm',
             'wikipedia-commons-local-public.ce',
             'c/ce/Dramatische_daling_insectenpopulatie,_75%_is_verdwenen.webm',
@@ -406,6 +426,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_temp(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/temp/8/88/20161115090130%21fYJSjm.pdf/page1-71px-20161115090130%21fYJSjm.pdf.jpg',
+            {'X-Swift-Secret' : 'topsecret1234'},
             'File:20161115090130!fYJSjm.pdf',
             'wikipedia-en-local-temp.57',
             '5/57/20161115090130!fYJSjm.pdf',
