@@ -1,4 +1,4 @@
-python-thumbor-wikimedia (2.3-1) jessie-wikimedia; urgency=low
+python-thumbor-wikimedia (2.3-1+deb9u1) stretch-wikimedia; urgency=low
 
   * New upstream release
 
