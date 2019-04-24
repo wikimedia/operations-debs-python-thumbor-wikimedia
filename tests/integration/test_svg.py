@@ -3,7 +3,7 @@ from . import WikimediaTestCase
 
 
 distname, distversion, distid = platform.linux_distribution()
-distversion = float(distversion)
+distversion = 10.0 if distversion == 'buster/sid' else float(distversion)
 
 
 class WikimediaTest(WikimediaTestCase):
@@ -143,7 +143,7 @@ class WikimediaTest(WikimediaTestCase):
             '119px-BuickLogo_silber.svg.png',
             119,
             120,
-            1.0,
+            0.99,
             0.99
         )
         self.run_and_check_ssim_and_size(

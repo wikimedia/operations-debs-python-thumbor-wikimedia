@@ -584,9 +584,16 @@ class ImagesHandler(ImagingHandler):
 
     # Similarly, after the _load_requests neutering happening above, thumbor
     # Would still try to send a response to the client after the 500 error
-    def _write_results_to_client(self, context, results, content_type):
-        if results is not None:
-            BaseHandler._write_results_to_client(self, context, results, content_type)
+    def _write_results_to_client(self, context, results, content_type=None):
+        # Upstream signature changed in c5637bdd7e83a6bb0408c25aaadb61f03f1bdc8a
+        if content_type is None:
+            content_type = results
+            results = context
+            if results is not None:
+                BaseHandler._write_results_to_client(self, results, content_type)
+        else:
+            if results is not None:
+                BaseHandler._write_results_to_client(self, context, results, content_type)
 
     # ... and would also try to store empty results
     def _store_results(self, context, results):

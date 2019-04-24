@@ -10,7 +10,7 @@ class WikimediaTest(WikimediaTestCase):
             300,
             202,
             0.99,
-            1.04
+            1.06
         )
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/300x/filters:format(webp)/Album_en_blanco_y_negro.webp',
@@ -19,5 +19,5 @@ class WikimediaTest(WikimediaTestCase):
             300,
             202,
             0.97,
-            0.12
+            0.14
         )

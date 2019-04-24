@@ -18,7 +18,7 @@ class WikimediaTest(WikimediaTestCase):
             '300px-Jokie.gif',
             300,
             290,
-            1.0,
+            0.99,
             1.11
         )
         # Animated GIF that triggers MAX_ANIMATED_GIF_AREA
@@ -28,6 +28,6 @@ class WikimediaTest(WikimediaTestCase):
             '300px-Tranylcypromine3DanJ.gif',
             300,
             145,
-            1.0,
+            0.99,
             1.0
         )

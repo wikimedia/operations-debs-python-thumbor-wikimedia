@@ -70,7 +70,6 @@ class WikimediaTestCase(AsyncHTTPTestCase):
         cfg.MAX_ANIMATED_GIF_AREA = 500 * 200 * 60
 
         cfg.COMMUNITY_EXTENSIONS = [
-            'wikimedia_thumbor.handler.multi',
             'wikimedia_thumbor.handler.images',
             'wikimedia_thumbor.handler.core'
         ]

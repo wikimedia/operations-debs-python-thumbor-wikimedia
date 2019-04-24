@@ -99,7 +99,7 @@ class WikimediaTest(WikimediaTestCase):
             1000,
             1000,
             1.0,
-            0.18
+            0.62
         )
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/Tower.jpg',

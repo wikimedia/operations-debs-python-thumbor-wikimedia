@@ -492,7 +492,9 @@ class Engine(BaseEngine):
         if self.webp['lossless']:
             # The -exact option was introduced in webp 0.5, which is only available on Stretch
             distname, distversion, distid = platform.linux_distribution()
-            if distname == 'debian' and float(distversion) >= 9:
+            distversion = 10.0 if distversion == 'buster/sid' else float(distversion)
+
+            if distname == 'debian' and distversion >= 9:
                 command += ['-lossless', '-exact']
             else:
                 command += ['-lossless']

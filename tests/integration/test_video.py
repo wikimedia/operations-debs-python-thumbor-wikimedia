@@ -24,7 +24,7 @@ class WikimediaVideoTest(WikimediaTestCase):
             640,
             480,
             0.98,
-            0.75
+            0.76
         )
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/640x/filters:format(webp)/' + path,
