@@ -12,7 +12,7 @@ tests_require = [
 
 setup(
     name='wikimedia_thumbor',
-    version='2.5',
+    version='2.6',
     url='https://phabricator.wikimedia.org/diffusion/THMBREXT/',
     license='MIT',
     author='Gilles Dubuc, Wikimedia Foundation',

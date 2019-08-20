@@ -332,7 +332,7 @@ class Engine(BaseEngine):
             result = self.process_exif(result)
 
         if hasattr(self, 'webp') and self.webp:
-            result = self.convert_to_webp(result)
+            result = self.maybe_convert_to_webp(result)
 
         ShellRunner.rm_f(self.image.name)
 
@@ -476,11 +476,11 @@ class Engine(BaseEngine):
 
         return returncode, stderr, result
 
-    def convert_to_webp(self, result):
+    def maybe_convert_to_webp(self, jpg_result):
         temp_file = NamedTemporaryFile(delete=False)
 
         with open(temp_file.name, 'w') as tmp:
-            tmp.write(result)
+            tmp.write(jpg_result)
 
         command = [
             self.context.config.CWEBP_PATH,
@@ -509,11 +509,15 @@ class Engine(BaseEngine):
             '-'
         ]
 
-        returncode, stderr, result = ShellRunner.command(command,  self.context)
+        returncode, stderr, webp_result = ShellRunner.command(command,  self.context)
 
         ShellRunner.rm_f(temp_file.name)
 
-        return result
+        # If we fail to convert the JPG thumbnail to a WEBP, serve the JPG
+        if returncode != 0:
+            return jpg_result
+
+        return webp_result
 
     def debug(self, message):
         logger.debug(message, extra=log_extra(self.context))

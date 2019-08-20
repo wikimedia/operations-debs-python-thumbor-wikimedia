@@ -1,3 +1,9 @@
+python-thumbor-wikimedia (2.6-1+deb10u1) buster-wikimedia; urgency=low
+
+  * New upstream release
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Tue, 20 Aug 2019 14:27:00 +0000
+
 python-thumbor-wikimedia (2.5-1+deb10u1) buster-wikimedia; urgency=low
 
   * New upstream release
