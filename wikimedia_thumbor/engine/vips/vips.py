@@ -101,21 +101,27 @@ class Engine(BaseWikimediaEngine):
         except AttributeError:
             source = self.source
 
-        try:
-            return self.shrink_for_page(source, shrink_factor)
-        except CommandError:
-            # The page is probably out of bounds, try again without
-            # specifying a page
-            source = self.source
+        output_args = ""
 
-        try:
-            return self.shrink_for_page(source, shrink_factor)
-        except CommandError as e:
-            # Now that we've failed twice in a row, we cleanup the source
-            self.cleanup_source()
-            raise e
+        for i in range(3):
+            try:
+                return self.shrink_for_page(source, shrink_factor, output_args)
+            except CommandError as e:
+                if "does not contain page" in e.args[2]:
+                    # The page is probably out of bounds, try again without
+                    # specifying a page
+                    source = self.source
+                elif "profile" in e.args[2] and "vips2png: unable to write" in e.args[2]:
+                    # libpng doesn't want to write files with ICC profiles
+                    # that it doesn't like. Force those images to use TinyRGB
+                    self.debug('[VIPS] Forcing TinyRGB profile')
+                    output_args = "[profile=%s]" % self.context.config.EXIF_TINYRGB_PATH
+                elif i >= 1:
+                    # Tried at least twice, but failed and we're out of ideas
+                    self.cleanup_source()
+                    raise e
 
-    def shrink_for_page(self, source, shrink_factor):
+    def shrink_for_page(self, source, shrink_factor, output_args=""):
         temp_dir = mkdtemp()
         destination = os.path.join(
             temp_dir,
@@ -126,7 +132,7 @@ class Engine(BaseWikimediaEngine):
             self.context.config.VIPS_PATH,
             'shrink',
             source,
-            destination,
+            destination + output_args,
             "%d" % shrink_factor,
             "%d" % shrink_factor
         ]

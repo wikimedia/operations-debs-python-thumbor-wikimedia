@@ -58,8 +58,12 @@ def _error(self, status, msg=None):
 
         record_timing(self.context, datetime.datetime.now() - start, 'memcache.set', 'Thumbor-Memcache-Set-Time')
 
-    # Errors should explicitely not be cached
-    self.set_header('Cache-Control', 'no-cache')
+    if status == 404:
+        # The CDN should cache 404 errors
+        self.set_header('Cache-Control', 's-maxage=600')
+    else:
+        # Other errors should explicitely not be cached
+        self.set_header('Cache-Control', 'no-cache')
 
     self.clear_header('xkey')
     self.clear_header('Content-Disposition')

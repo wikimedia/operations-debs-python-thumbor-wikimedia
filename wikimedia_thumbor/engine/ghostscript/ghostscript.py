@@ -11,13 +11,14 @@
 
 # Ghostscript engine
 
-from wikimedia_thumbor.engine import BaseWikimediaEngine
+from wikimedia_thumbor.engine import BaseWikimediaEngine, CommandError
+from wikimedia_thumbor.shell_runner import ShellRunner
 
 
 BaseWikimediaEngine.add_format(
-    'application/pdf',
-    '.pdf',
-    lambda buffer: buffer.startswith('%PDF')
+    "application/pdf",
+    ".pdf",
+    lambda buffer: buffer.startswith("%PDF")
 )
 
 
@@ -30,17 +31,17 @@ class Engine(BaseWikimediaEngine):
 
         self.prepare_source(buffer)
 
-        jpg = self.get_jpg_for_page(buffer, page)
+        jpg, stderr = self.get_jpg_for_page(buffer, page)
 
-        # GS is being unhelpful and outputting that error to stdout
+        # GS is being unhelpful and outputting that error to stderr
         # with a 0 exit status
-        error = 'No pages will be processed (FirstPage > LastPage)'
-        if len(jpg) < 200 and jpg.find(error) != -1:
-            jpg = self.get_jpg_for_page(buffer, 1)
+        error = "No pages will be processed (FirstPage > LastPage)"
+        if len(jpg) < 200 and stderr.find(error) != -1:
+            jpg, stderr = self.get_jpg_for_page(buffer, 1)
 
         self.cleanup_source()
 
-        self.extension = '.jpg'
+        self.extension = ".jpg"
 
         return super(Engine, self).create_image(jpg)
 
@@ -55,6 +56,7 @@ class Engine(BaseWikimediaEngine):
             self.context.config.GHOSTSCRIPT_PATH,
             "-sDEVICE=jpeg",
             "-dJPEG=90",
+            "-sstdout=%stderr",
             "-sOutputFile=%stdout",
             "-dFirstPage=%d" % page,
             "-dLastPage=%d" % page,
@@ -63,7 +65,11 @@ class Engine(BaseWikimediaEngine):
             "-dNOPAUSE",
             "-dSAFER",
             "-q",
-            "-f%s" % self.source
+            "-f%s" % self.source,
         ]
 
-        return self.command(command, clean_on_error=False, clean_on_success=False)
+        returncode, stderr, stdout = ShellRunner.command(command, self.context)
+        if returncode != 0:
+            raise CommandError(command, stdout, stderr, returncode)
+
+        return stdout, stderr

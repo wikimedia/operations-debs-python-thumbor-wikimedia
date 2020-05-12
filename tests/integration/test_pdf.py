@@ -79,3 +79,24 @@ class WikimediaTest(WikimediaTestCase):
             0.93,
             0.6,
         )
+
+    def test_pdf_nonfatal_gs_errors(self):
+        """Regression test for T236240"""
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/400x/18KOZ-1.pdf',
+            'page1-400px-18KOZ-1.pdf.jpg',
+            'page1-400px-18KOZ-1.pdf.png',
+            400,
+            566,
+            0.9,
+            0.62,
+        )
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/400x/filters:format(webp)/18KOZ-1.pdf',
+            'page1-400px-18KOZ-1.pdf.jpg',
+            'page1-400px-18KOZ-1.pdf.png',
+            400,
+            566,
+            0.9,
+            0.6,
+        )

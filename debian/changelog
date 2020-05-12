@@ -1,3 +1,10 @@
+python-thumbor-wikimedia (2.7-1+deb10u1) stretch-wikimedia; urgency=low
+
+  * New upstream release
+   - Buster versions were never deployed, and we need to update the prod Stretch machines
+
+ -- Gilles Dubuc <gilles@wikimedia.org>  Tue, 12 May 2020 09:38:00 +0000
+
 python-thumbor-wikimedia (2.6-1+deb10u1) buster-wikimedia; urgency=low
 
   * New upstream release

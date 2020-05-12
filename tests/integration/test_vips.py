@@ -88,6 +88,44 @@ class WikimediaVipsTest(WikimediaTestCase):
             0.61,
         )
 
+    def test_tiff_with_invalid_icc_profile(self):
+        self.run_and_check_ssim_and_size(
+            (
+                'thumbor/unsafe/400x/filters:format(jpg)/Julia_Margaret_'
+                'Cameron_-_Queen_of_the_May_-_1984.166_-_Cleveland_Museum_of_Art.tif'
+            ),
+            (
+                'lossy-page1-400px-Julia_Margaret_Cameron_-_Queen_of_the_May_'
+                '-_1984.166_-_Cleveland_Museum_of_Art.tif.jpg'
+            ),
+            (
+                'lossy-page1-400px-Julia_Margaret_Cameron_-_Queen_of_the_May_'
+                '-_1984.166_-_Cleveland_Museum_of_Art.tif.png'
+            ),
+            400,
+            527,
+            0.97,
+            0.6,
+        )
+        self.run_and_check_ssim_and_size(
+            (
+                'thumbor/unsafe/400x/filters:format(webp)/Julia_Margaret_'
+                'Cameron_-_Queen_of_the_May_-_1984.166_-_Cleveland_Museum_of_Art.tif'
+            ),
+            (
+                'lossy-page1-400px-Julia_Margaret_Cameron_-_Queen_of_the_May_'
+                '-_1984.166_-_Cleveland_Museum_of_Art.tif.webp'
+            ),
+            (
+                'lossy-page1-400px-Julia_Margaret_Cameron_-_Queen_of_the_May_'
+                '-_1984.166_-_Cleveland_Museum_of_Art.tif.png'
+            ),
+            400,
+            527,
+            0.97,
+            1.0,
+        )
+
     def test_png(self):
         self.run_and_check_ssim_and_size(
             'thumbor/unsafe/400x/WorldMap-A_non-Frame.png',
