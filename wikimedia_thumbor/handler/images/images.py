@@ -594,7 +594,10 @@ class ImagesHandler(ImagingHandler):
             content_type = results
             results = context
             if results is not None:
-                BaseHandler._write_results_to_client(self, results, content_type)
+                try:
+                    BaseHandler._write_results_to_client(self, results, content_type)
+                except TypeError:
+                    BaseHandler._write_results_to_client(self, context, results, content_type)
         else:
             if results is not None:
                 BaseHandler._write_results_to_client(self, context, results, content_type)
