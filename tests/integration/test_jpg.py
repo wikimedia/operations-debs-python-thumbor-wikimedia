@@ -208,3 +208,22 @@ class WikimediaTest(WikimediaTestCase):
             0.96,
             0.92,
         )
+
+    def test_bad_orientation(self):
+        """Regression test for https://phabricator.wikimedia.org/T193326"""
+        self.run_and_check_ssim_and_size(
+            url=(
+                'thumbor/unsafe/450x/filters:conditional_sharpen(0.0,0.8,1.0,0.0,0.85)/'
+                'Smedavska_hornatina_Sloupsky_potok_vodopad_01.jpg'
+            ),
+            mediawiki_reference_thumbnail=(
+                '450px-Smedavska_hornatina_Sloupsky_potok_vodopad_01.jpg'
+            ),
+            perfect_reference_thumbnail=(
+                '450px-Smedavska_hornatina_Sloupsky_potok_vodopad_01.jpg.png'
+            ),
+            expected_width=450,
+            expected_height=600,
+            expected_ssim=0.88,
+            size_tolerance=0.82,
+        )

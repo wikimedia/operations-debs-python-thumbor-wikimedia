@@ -128,20 +128,54 @@ class WikimediaVipsTest(WikimediaTestCase):
 
     def test_png(self):
         self.run_and_check_ssim_and_size(
-            'thumbor/unsafe/400x/WorldMap-A_non-Frame.png',
-            '400px-WorldMap-A_non-Frame.png',
-            '400px-WorldMap-A_non-Frame.png',
-            400,
-            200,
-            0.94,
-            1.0
+            url='thumbor/unsafe/400x/filters:format(png)/WorldMap-A_non-Frame.png',
+            mediawiki_reference_thumbnail='400px-WorldMap-A_non-Frame.png',
+            perfect_reference_thumbnail='400px-WorldMap-A_non-Frame.png',
+            expected_width=400,
+            expected_height=200,
+            expected_ssim=0.98,
+            size_tolerance=1.1,
         )
         self.run_and_check_ssim_and_size(
-            'thumbor/unsafe/400x/filters:format(webp)/WorldMap-A_non-Frame.png',
-            '400px-WorldMap-A_non-Frame.png',
-            '400px-WorldMap-A_non-Frame.png',
-            400,
-            200,
-            0.98,
-            0.84
+            url='thumbor/unsafe/400x/filters:format(webp)/WorldMap-A_non-Frame.png',
+            mediawiki_reference_thumbnail='400px-WorldMap-A_non-Frame.png',
+            perfect_reference_thumbnail='400px-WorldMap-A_non-Frame.png',
+            expected_width=400,
+            expected_height=200,
+            expected_ssim=0.98,
+            size_tolerance=0.84,
+        )
+
+    def test_skip_factor_1(self):
+        self.run_and_check_ssim_and_size(
+            url=(
+                'thumbor/unsafe/2000x/filters:format(png)/'
+                'Lakedaimoniergrab_Zeichnung_und_Steinplan.png'
+            ),
+            mediawiki_reference_thumbnail=(
+                '2000px-Lakedaimoniergrab_Zeichnung_und_Steinplan.png'
+            ),
+            perfect_reference_thumbnail=(
+                '2000px-Lakedaimoniergrab_Zeichnung_und_Steinplan.png'
+            ),
+            expected_width=2000,
+            expected_height=987,
+            expected_ssim=0.99,
+            size_tolerance=1.01,
+        )
+        self.run_and_check_ssim_and_size(
+            url=(
+                'thumbor/unsafe/2000x/filters:format(webp)/'
+                'Lakedaimoniergrab_Zeichnung_und_Steinplan.png'
+            ),
+            mediawiki_reference_thumbnail=(
+                '2000px-Lakedaimoniergrab_Zeichnung_und_Steinplan.png'
+            ),
+            perfect_reference_thumbnail=(
+                '2000px-Lakedaimoniergrab_Zeichnung_und_Steinplan.png'
+            ),
+            expected_width=2000,
+            expected_height=987,
+            expected_ssim=0.99,
+            size_tolerance=0.88,
         )

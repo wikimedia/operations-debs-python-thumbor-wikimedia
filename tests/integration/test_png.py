@@ -94,8 +94,8 @@ class WikimediaTest(WikimediaTestCase):
             '400px-Quillette.png',
             400,
             100,
-           0.99,
-           1.01
+            0.99,
+            1.01
         )
         # RGB with tRNS and no alpha channel
         self.run_and_check_ssim_and_size(
@@ -105,8 +105,8 @@ class WikimediaTest(WikimediaTestCase):
             '100px-RGB_with_tRNS.png',
             100,
             100,
-           0.99,
-           1.0
+            0.99,
+            1.0
         )
         # Greyscale with tRNS and no alpha channel
         self.run_and_check_ssim_and_size(
@@ -116,6 +116,17 @@ class WikimediaTest(WikimediaTestCase):
             '100px-Greyscale_with_tRNS.png',
             100,
             100,
-           0.99,
-           1.0
+            0.99,
+            1.0
+        )
+
+    def test_T245440(self):
+        self.run_and_check_ssim_and_size(
+            'thumbor/unsafe/400x/Ethiopian_Region_Map_with_Capitals_and_Flags.png',
+            '400px-Ethiopian_Region_Map_with_Capitals_and_Flags.png',
+            '400px-Ethiopian_Region_Map_with_Capitals_and_Flags.png',
+            400,
+            400,
+            0.9,
+            1.0,
         )

@@ -82,12 +82,17 @@ class Storage(BaseStorage):
             # This way when an thumbnail falls our of Varnish and is picked
             # up from Swift again, it will have an xkey. Which lets us avoid
             # computing the xkey in Varnish. It always comes from Thumbor.
-            headers = None
             xkey = self.context.request_handler._headers.get_list('xkey')
             content_type = self.context.request_handler._headers.get_list('content-type')
+            content_disposition = self.context.request_handler._headers.get_list('content-disposition')
+
+            headers = {}
+
+            if len(content_disposition):
+                headers['Content-Disposition'] = content_disposition[0]
 
             if len(xkey):
-                headers = {'xkey': xkey[0]}
+                headers['Xkey'] = xkey[0]
 
             content_type = content_type[0] if len(content_type) else None
 
@@ -104,6 +109,9 @@ class Storage(BaseStorage):
             # We cannot set the time spent in putting to swift in the response
             # headers, because the response has already been sent when saving
             # to Swift happens (which is the right thing to do).
+        except AssertionError as e:
+            # Let assertion errors go through for tests
+            raise e
         except Exception as e:
             record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.write.exception')
             self.error('[SWIFT_STORAGE] put exception: %r' % e)
@@ -144,6 +152,9 @@ class Storage(BaseStorage):
             # requested object isn't there
             self.debug('[SWIFT_STORAGE] missing')
             callback(None)
+        except AssertionError as e:
+            # Let assertion errors go through for tests
+            raise e
         except Exception as e:
             logging.disable(logging.NOTSET)
             record_timing(self.context, datetime.datetime.now() - start, 'swift.thumbnail.read.exception', 'Thumbor-Swift-Thumbnail-Exception-Time')

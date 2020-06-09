@@ -426,7 +426,7 @@ class WikimediaImagesHandlerTestCase(WikimediaTestCase):
     def test_temp(self):
         self.run_and_check_headers(
             '/wikipedia/en/thumb/temp/8/88/20161115090130%21fYJSjm.pdf/page1-71px-20161115090130%21fYJSjm.pdf.jpg',
-            {'X-Swift-Secret' : 'topsecret1234'},
+            {'X-Swift-Secret': 'topsecret1234'},
             'File:20161115090130!fYJSjm.pdf',
             'wikipedia-en-local-temp.57',
             '5/57/20161115090130!fYJSjm.pdf',

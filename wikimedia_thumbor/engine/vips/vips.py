@@ -85,6 +85,11 @@ class Engine(BaseWikimediaEngine):
             (2.0 * float(self.context.request.width))
         )))
 
+        # T218272: If shrink_factor == 1, VIPS doesn't scale the image.
+        # Don't bother running the command and just let ImageMagick handle it.
+        if shrink_factor == 1:
+            return super(Engine, self).create_image(buffer)
+
         result = self.shrink(buffer, shrink_factor)
 
         return super(Engine, self).create_image(result)

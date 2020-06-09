@@ -14,7 +14,7 @@
 import logging
 import platform
 from tempfile import NamedTemporaryFile
-from pyexiv2 import ImageMetadata
+from pyexiv2 import ImageMetadata, ExifValueError
 
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
@@ -84,7 +84,7 @@ class Engine(BaseEngine):
         buffer_size = [float(x) for x in buffer_size]
         buffer_ratio = buffer_size[0] / buffer_size[1]
 
-        if 'Pyexiv2Orientation'in self.exif:
+        if 'Pyexiv2Orientation' in self.exif:
             if self.exif['Pyexiv2Orientation'] in (6, 8):
                 buffer_ratio = buffer_size[1] / buffer_size[0]
 
@@ -134,16 +134,25 @@ class Engine(BaseEngine):
 
         metadata = ImageMetadata(input_temp_file.name)
         try:
-            # T178072 pyexviv2 writes to stderr even if the exception is caught
-            logging.disable(logging.ERROR)
-            metadata.read()
-            logging.disable(logging.NOTSET)
+            try:
+                # T178072 pyexviv2 writes to stderr even if the exception is caught
+                logging.disable(logging.ERROR)
+                metadata.read()
+            finally:
+                logging.disable(logging.NOTSET)
+
             if 'Exif.Image.Orientation' in metadata.exif_keys:
                 # Distinctive key name to avoid colliding with EXIF_FIELDS_TO_KEEP
                 self.exif['Pyexiv2Orientation'] = metadata.get('Exif.Image.Orientation').value
-        except IOError:
-            logging.disable(logging.NOTSET)
+        except (IOError, ExifValueError):
             self.debug('[IM] Could not read EXIF with pyexiv2')
+        except RuntimeError as e:
+            # T245440 exiv2 0.25-3.1+deb9u1 handles missing metadata as corruption, and
+            # pyexiv2 raises that as a generic runtime error.
+            if e[0] == 'corrupted image metadata':
+                self.debug('[IM] Could not read EXIF with pyexiv2')
+            else:
+                raise
 
         stdout = Engine.exiftool.command(
             context=self.context,
@@ -381,7 +390,7 @@ class Engine(BaseEngine):
         buffer_size = [float(x) for x in buffer_size]
         buffer_ratio = buffer_size[0] / buffer_size[1]
 
-        if 'Pyexiv2Orientation'in self.exif:
+        if 'Pyexiv2Orientation' in self.exif:
             if self.exif['Pyexiv2Orientation'] in (6, 8):
                 buffer_ratio = buffer_size[1] / buffer_size[0]
 
@@ -415,7 +424,7 @@ class Engine(BaseEngine):
         # increasing their file size significantly.
         if ('ColorType' in self.exif
             and self.exif['ColorType'] in ['RGB with Alpha', 'Grayscale with Alpha', 'Palette']) \
-            or 'Transparency' in self.exif:
+                or 'Transparency' in self.exif:
             operators += ['-background', 'none']
 
         self.queue_operators(operators)

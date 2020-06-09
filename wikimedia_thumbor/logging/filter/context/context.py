@@ -27,7 +27,7 @@ class ContextFilter(logging.Filter):
         if type(self).port == '????':
             try:
                 matches = re.match(
-                    '.*thumbor running at \d+.\d+.\d+.\d+:([\d]+).*',
+                    r'.*thumbor running at \d+.\d+.\d+.\d+:([\d]+).*',
                     unicode(record.msg)
                 )
             except ValueError:
